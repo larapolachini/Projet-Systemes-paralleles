@@ -1,1 +1,1 @@
-# Projet-Syst-mes-parall-les
+# Projet Systemes paralleles
