@@ -2,6 +2,8 @@
 #include <cmath>
 #include <iostream>
 #include "model.hpp"
+#include <omp.h>
+
 
 
 namespace
@@ -76,93 +78,130 @@ bool
 Model::update()
 {
     auto next_front = m_fire_front;
-    for (auto f : m_fire_front)
+    std::vector<std::pair<std::size_t, std::uint8_t>> fire_front_vector(
+        m_fire_front.begin(), m_fire_front.end()
+    );
+    int num_threads = omp_get_max_threads();
+    std::vector<std::unordered_map<std::size_t, std::uint8_t>> next_front_private(num_threads);
+
+
+    #pragma omp parallel
     {
-        // Récupération de la coordonnée lexicographique de la case en feu :
-        LexicoIndices coord = get_lexicographic_from_index(f.first);
-        // Et de la puissance du foyer
-        double        power = log_factor(f.second);
+        int tid = omp_get_thread_num();
+        auto& local_next_front = next_front_private[tid];
+    
 
-
-        // On va tester les cases voisines pour contamination par le feu :
-        if (coord.row < m_geometry-1)
+        #pragma omp for 
+        for (int idx=0 ; idx < fire_front_vector.size();idx++)
         {
-            double tirage      = pseudo_random( f.first+m_time_step, m_time_step);
-            double green_power = m_vegetation_map[f.first+m_geometry];
-            double correction  = power*log_factor(green_power);
-            if (tirage < alphaSouthNorth*p1*correction)
-            {
-                m_fire_map[f.first + m_geometry]   = 255.;
-                next_front[f.first + m_geometry] = 255.;
-            }
-        }
+            auto& f = fire_front_vector[idx];
+            // Récupération de la coordonnée lexicographique de la case en feu :
+            LexicoIndices coord = get_lexicographic_from_index(f.first);
+            // Et de la puissance du foyer
+            double power = log_factor(f.second);
 
-        if (coord.row > 0)
-        {
-            double tirage      = pseudo_random( f.first*13427+m_time_step, m_time_step);
-            double green_power = m_vegetation_map[f.first - m_geometry];
-            double correction  = power*log_factor(green_power);
-            if (tirage < alphaNorthSouth*p1*correction)
-            {
-                m_fire_map[f.first - m_geometry] = 255.;
-                next_front[f.first - m_geometry] = 255.;
-            }
-        }
 
-        if (coord.column < m_geometry-1)
-        {
-            double tirage      = pseudo_random( f.first*13427*13427+m_time_step, m_time_step);
-            double green_power = m_vegetation_map[f.first+1];
-            double correction  = power*log_factor(green_power);
-            if (tirage < alphaEastWest*p1*correction)
+            // On va tester les cases voisines pour contamination par le feu :
+            if (coord.row < m_geometry-1)
             {
-                m_fire_map[f.first + 1] = 255.;
-                next_front[f.first + 1] = 255.;
+                double tirage      = pseudo_random( f.first+m_time_step, m_time_step);
+                double green_power = m_vegetation_map[f.first+m_geometry];
+                double correction  = power*log_factor(green_power);
+                if (tirage < alphaSouthNorth*p1*correction)
+                {
+                    #pragma omp atomic write
+                    m_fire_map[f.first + m_geometry]   = 255.;
+                    local_next_front[f.first + m_geometry] = 255.;
+                }
             }
-        }
 
-        if (coord.column > 0)
-        {
-            double tirage      = pseudo_random( f.first*13427*13427*13427+m_time_step, m_time_step);
-            double green_power = m_vegetation_map[f.first - 1];
-            double correction  = power*log_factor(green_power);
-            if (tirage < alphaWestEast*p1*correction)
+            if (coord.row > 0)
             {
-                m_fire_map[f.first - 1] = 255.;
-                next_front[f.first - 1] = 255.;
+                double tirage      = pseudo_random( f.first*13427+m_time_step, m_time_step);
+                double green_power = m_vegetation_map[f.first - m_geometry];
+                double correction  = power*log_factor(green_power);
+                if (tirage < alphaNorthSouth*p1*correction)
+                {
+                    #pragma omp atomic write
+                    m_fire_map[f.first - m_geometry] = 255.;
+                    local_next_front[f.first - m_geometry] = 255.;
+                }
             }
-        }
-        // Si le feu est à son max,
-        if (f.second == 255)
-        {   // On regarde si il commence à faiblir pour s'éteindre au bout d'un moment :
-            double tirage = pseudo_random( f.first * 52513 + m_time_step, m_time_step);
-            if (tirage < p2)
+    
+            if (coord.column < m_geometry-1)
             {
+                double tirage      = pseudo_random( f.first*13427*13427+m_time_step, m_time_step);
+                double green_power = m_vegetation_map[f.first+1];
+                double correction  = power*log_factor(green_power);
+                if (tirage < alphaEastWest*p1*correction)
+                {
+                    #pragma omp atomic write
+                    m_fire_map[f.first + 1] = 255.;
+                    local_next_front[f.first + 1] = 255.;
+                }
+            }
+    
+            if (coord.column > 0)
+            {
+                double tirage      = pseudo_random( f.first*13427*13427*13427+m_time_step, m_time_step);
+                double green_power = m_vegetation_map[f.first - 1];
+                double correction  = power*log_factor(green_power);
+                if (tirage < alphaWestEast*p1*correction)
+                {
+                    #pragma omp atomic write
+                    m_fire_map[f.first - 1] = 255.;
+                    local_next_front[f.first - 1] = 255.;
+                }
+            }
+            // Si le feu est à son max,
+            if (f.second == 255)
+            {   // On regarde si il commence à faiblir pour s'éteindre au bout d'un moment :
+                double tirage = pseudo_random( f.first * 52513 + m_time_step, m_time_step);
+                if (tirage < p2)
+                {
+                    #pragma omp atomic update
+                    m_fire_map[f.first] >>= 1;
+                    local_next_front[f.first] >>= 1;
+                }
+                else{
+                    local_next_front[f.first] = 255;
+                }
+                
+            }
+            else
+            {
+                // Foyer en train de s'éteindre.
+                #pragma omp atomic update
                 m_fire_map[f.first] >>= 1;
-                next_front[f.first] >>= 1;
+                std::uint8_t new_value = f.second >> 1;
+                if (new_value > 0)
+                {
+                    local_next_front[f.first] = new_value;
+                }
             }
         }
-        else
+        // A chaque itération, la végétation à l'endroit d'un foyer diminue
+        #pragma omp for
+        for (int i = 0; i < fire_front_vector.size(); ++i)
         {
-            // Foyer en train de s'éteindre.
-            m_fire_map[f.first] >>= 1;
-            next_front[f.first] >>= 1;
-            if (next_front[f.first] == 0)
-            {
-                next_front.erase(f.first);
-            }
+            auto& f = fire_front_vector[i];
+            if (m_vegetation_map[f.first] > 0)
+                #pragma omp atomic
+                m_vegetation_map[f.first] -= 1;
         }
-
-    }    
-    // A chaque itération, la végétation à l'endroit d'un foyer diminue
-    m_fire_front = next_front;
-    for (auto f : m_fire_front)
-    {
-        if (m_vegetation_map[f.first] > 0)
-            m_vegetation_map[f.first] -= 1;
     }
+    next_front.clear();
+    for (const auto& local_map : next_front_private) {
+        for (const auto& kv : local_map) {
+            next_front[kv.first] = kv.second;
+        }
+    }
+    
+    m_fire_front = next_front;
     m_time_step += 1;
+    
     return !m_fire_front.empty();
+
 }
 // ====================================================================================================================
 std::size_t   

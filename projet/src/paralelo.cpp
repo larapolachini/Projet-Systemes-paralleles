@@ -205,7 +205,7 @@ int main(int nargs, char* args[])
     auto displayer = Displayer::init_instance(params.discretization, params.discretization);
     auto simu = Model(params.length, params.discretization, params.wind, params.start);
 
-    std::ofstream output_file("simulation_results.txt");
+    std::ofstream output_file("simulation_results2.txt");
     if (!output_file.is_open())
     {
         std::cerr << "Erro ao abrir o arquivo para escrita!" << std::endl;
