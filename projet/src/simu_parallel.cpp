@@ -5,6 +5,7 @@
 #include <thread>
 #include <chrono>
 #include <SDL2/SDL.h>
+#include <omp.h>
 
 #include "model.hpp"
 #include "display.hpp"
@@ -211,13 +212,21 @@ int main( int nargs, char* args[] )
     {
         double update_time_ms = 0.0;
         double display_time_ms = 0.0;
+
         auto start_total = std::chrono::high_resolution_clock::now();
 
-        auto start_update = std::chrono::high_resolution_clock::now();
-        bool time1 = simu.update();
-        auto end_update = std::chrono::high_resolution_clock::now();
+        #pragma omp parallel reduction(+:update_time_ms)
+        {
+            
+            #pragma omp for
+            auto start_update = std::chrono::high_resolution_clock::now();
+            for(int i =0 ; i<8 ; i++){
+                bool time1 = simu.update();
+            }
+            auto end_update = std::chrono::high_resolution_clock::now();
+            update_time_ms += std::chrono::duration<double, std::milli>(end_update - start_update).count();
+        }
 
-        std::chrono::duration<double, std::milli> update_time = end_update - start_update;
 
 
         if ((simu.time_step() & 31) == 0) 
@@ -241,7 +250,7 @@ int main( int nargs, char* args[] )
 
 
 
-        std::cout << "Update Time: " << update_time.count() << " ms, ";
+        std::cout << "Update Time: " << update_time_ms<< " ms, ";
         std::cout << "Display Time: " << display_time.count() << " ms\n";
         std::cout << "Total Time: " << total_time.count() << " ms\n";
 
