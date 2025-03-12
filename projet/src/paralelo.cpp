@@ -5,7 +5,7 @@
 #include <thread>
 #include <chrono>
 #include <SDL2/SDL.h>
-
+#include <omp.h>
 #include "model.hpp"
 #include "display.hpp"
 #include <fstream>  // Adiciona a biblioteca para arquivos
@@ -204,11 +204,14 @@ int main(int nargs, char* args[])
 
     auto displayer = Displayer::init_instance(params.discretization, params.discretization);
     auto simu = Model(params.length, params.discretization, params.wind, params.start);
+    int num_threads = omp_get_max_threads();
 
-    std::ofstream output_file("simulation_results2.txt");
+    std::string output_filename = "simulation_" + std::to_string(num_threads) + "threads.txt";
+    std::ofstream output_file(output_filename);
     if (!output_file.is_open())
     {
         std::cerr << "Erro ao abrir o arquivo para escrita!" << std::endl;
+        
         return EXIT_FAILURE;
     }
 
@@ -222,29 +225,49 @@ int main(int nargs, char* args[])
 
     SDL_Event event;
     bool keep_running = true;
-
-    while (keep_running)
+    int cont = 0;
+    int max = 32;
+    while (keep_running && cont < max)
     {
+        cont++;
+        // Cronometragem total
         auto start_total = std::chrono::high_resolution_clock::now();
 
+        // Atualização do modelo
         auto start_update = std::chrono::high_resolution_clock::now();
-        keep_running = simu.update();  // Só chama uma vez aqui!
+        keep_running = simu.update();
         auto end_update = std::chrono::high_resolution_clock::now();
+
+        if (!keep_running) {
+            std::cout << "Simulação finalizada antecipadamente no time_step " << simu.time_step() << std::endl;
+            break;
+        }
 
         std::chrono::duration<double, std::milli> update_time = end_update - start_update;
 
+        // Exibição periódica a cada 32 passos
         if ((simu.time_step() & 31) == 0)
         {
             std::cout << "Time step " << simu.time_step() << "\n===============" << std::endl;
             output_file << "\nTime step " << simu.time_step() << "\n===============" << std::endl;
         }
 
+        // Atualiza a tela
+        auto vegetal = simu.vegetal_map();
+        auto fire = simu.fire_map();
+
+        if (vegetal.empty() || fire.empty()) {
+            std::cerr << "Mapas vazios! Encerrando simulação." << std::endl;
+            break;
+        }
+
         auto start_displayer = std::chrono::high_resolution_clock::now();
-        displayer->update(simu.vegetal_map(), simu.fire_map());
+        displayer->update(vegetal, fire);
         auto end_displayer = std::chrono::high_resolution_clock::now();
 
         std::chrono::duration<double, std::milli> display_time = end_displayer - start_displayer;
 
+        // Evento SDL para fechar janela
         if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
             break;
 
@@ -261,11 +284,10 @@ int main(int nargs, char* args[])
                     << update_time.count() << "\t"
                     << display_time.count() << "\t"
                     << total_time.count() << "\n";
+
     }
 
     output_file << "\nSimulation Ended.\n";
     output_file.close();
-
     return EXIT_SUCCESS;
 }
-

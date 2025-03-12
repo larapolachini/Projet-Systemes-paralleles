@@ -87,8 +87,8 @@ Model::update()
 
     #pragma omp parallel
     {
-        int tid = omp_get_thread_num();
-        auto& local_next_front = next_front_private[tid];
+        int id = omp_get_thread_num();
+        auto& local_next_front = next_front_private[id];
     
 
         #pragma omp for 
@@ -191,9 +191,9 @@ Model::update()
         }
     }
     next_front.clear();
-    for (const auto& local_map : next_front_private) {
-        for (const auto& kv : local_map) {
-            next_front[kv.first] = kv.second;
+    for (const auto& x : next_front_private) {
+        for (const auto& y : x) {
+            next_front[y.first] = y.second;
         }
     }
     
