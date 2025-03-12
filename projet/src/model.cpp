@@ -2,8 +2,8 @@
 #include <cmath>
 #include <iostream>
 #include "model.hpp"
-#include <omp.h>
-
+#include <map>
+#include "omp.h"
 
 
 namespace
@@ -74,136 +74,141 @@ Model::Model( double t_length, unsigned t_discretization, std::array<double,2> t
     }
 }
 // --------------------------------------------------------------------------------------------------------------------
-bool 
-Model::update()
+bool Model::update()
 {
     auto next_front = m_fire_front;
-    std::vector<std::pair<std::size_t, std::uint8_t>> fire_front_vector(
-        m_fire_front.begin(), m_fire_front.end()
-    );
-    int num_threads = omp_get_max_threads();
-    std::vector<std::unordered_map<std::size_t, std::uint8_t>> next_front_private(num_threads);
 
+    // Criamos uma cópia thread-local para cada next_front parcial
+    std::vector<std::map<int, int>> next_front_locals(omp_get_max_threads());
+
+    // Também vamos criar uma cópia thread-local do m_fire_map se necessário
+    std::vector<std::map<int, double>> fire_map_updates(omp_get_max_threads());
 
     #pragma omp parallel
     {
-        int id = omp_get_thread_num();
-        auto& local_next_front = next_front_private[id];
-    
+        int tid = omp_get_thread_num();
+        auto& next_front_local = next_front_locals[tid];
+        auto& fire_map_update = fire_map_updates[tid];
 
-        #pragma omp for 
-        for (int idx=0 ; idx < fire_front_vector.size();idx++)
+        #pragma omp for nowait
+        for (int i = 0; i < m_fire_front.size(); ++i)
         {
-            auto& f = fire_front_vector[idx];
-            // Récupération de la coordonnée lexicographique de la case en feu :
+            auto it = m_fire_front.begin();
+            std::advance(it, i);
+            auto f = *it;
+
             LexicoIndices coord = get_lexicographic_from_index(f.first);
-            // Et de la puissance du foyer
             double power = log_factor(f.second);
 
-
-            // On va tester les cases voisines pour contamination par le feu :
-            if (coord.row < m_geometry-1)
+            if (coord.row < m_geometry - 1)
             {
-                double tirage      = pseudo_random( f.first+m_time_step, m_time_step);
-                double green_power = m_vegetation_map[f.first+m_geometry];
-                double correction  = power*log_factor(green_power);
-                if (tirage < alphaSouthNorth*p1*correction)
+                double tirage = pseudo_random(f.first + m_time_step, m_time_step);
+                double green_power = m_vegetation_map[f.first + m_geometry];
+                double correction = power * log_factor(green_power);
+
+                if (tirage < alphaSouthNorth * p1 * correction)
                 {
-                    #pragma omp atomic write
-                    m_fire_map[f.first + m_geometry]   = 255.;
-                    local_next_front[f.first + m_geometry] = 255.;
+                    fire_map_update[f.first + m_geometry] = 255.;
+                    next_front_local[f.first + m_geometry] = 255.;
                 }
             }
 
             if (coord.row > 0)
             {
-                double tirage      = pseudo_random( f.first*13427+m_time_step, m_time_step);
+                double tirage = pseudo_random(f.first * 13427 + m_time_step, m_time_step);
                 double green_power = m_vegetation_map[f.first - m_geometry];
-                double correction  = power*log_factor(green_power);
-                if (tirage < alphaNorthSouth*p1*correction)
+                double correction = power * log_factor(green_power);
+
+                if (tirage < alphaNorthSouth * p1 * correction)
                 {
-                    #pragma omp atomic write
-                    m_fire_map[f.first - m_geometry] = 255.;
-                    local_next_front[f.first - m_geometry] = 255.;
+                    fire_map_update[f.first - m_geometry] = 255.;
+                    next_front_local[f.first - m_geometry] = 255.;
                 }
             }
-    
-            if (coord.column < m_geometry-1)
+
+            if (coord.column < m_geometry - 1)
             {
-                double tirage      = pseudo_random( f.first*13427*13427+m_time_step, m_time_step);
-                double green_power = m_vegetation_map[f.first+1];
-                double correction  = power*log_factor(green_power);
-                if (tirage < alphaEastWest*p1*correction)
+                double tirage = pseudo_random(f.first * 13427 * 13427 + m_time_step, m_time_step);
+                double green_power = m_vegetation_map[f.first + 1];
+                double correction = power * log_factor(green_power);
+
+                if (tirage < alphaEastWest * p1 * correction)
                 {
-                    #pragma omp atomic write
-                    m_fire_map[f.first + 1] = 255.;
-                    local_next_front[f.first + 1] = 255.;
+                    fire_map_update[f.first + 1] = 255.;
+                    next_front_local[f.first + 1] = 255.;
                 }
             }
-    
+
             if (coord.column > 0)
             {
-                double tirage      = pseudo_random( f.first*13427*13427*13427+m_time_step, m_time_step);
+                double tirage = pseudo_random(f.first * 13427 * 13427 * 13427 + m_time_step, m_time_step);
                 double green_power = m_vegetation_map[f.first - 1];
-                double correction  = power*log_factor(green_power);
-                if (tirage < alphaWestEast*p1*correction)
+                double correction = power * log_factor(green_power);
+
+                if (tirage < alphaWestEast * p1 * correction)
                 {
-                    #pragma omp atomic write
-                    m_fire_map[f.first - 1] = 255.;
-                    local_next_front[f.first - 1] = 255.;
+                    fire_map_update[f.first - 1] = 255.;
+                    next_front_local[f.first - 1] = 255.;
                 }
             }
-            // Si le feu est à son max,
+
             if (f.second == 255)
-            {   // On regarde si il commence à faiblir pour s'éteindre au bout d'un moment :
-                double tirage = pseudo_random( f.first * 52513 + m_time_step, m_time_step);
+            {
+                double tirage = pseudo_random(f.first * 52513 + m_time_step, m_time_step);
                 if (tirage < p2)
                 {
-                    #pragma omp atomic update
-                    m_fire_map[f.first] >>= 1;
-                    local_next_front[f.first] >>= 1;
+                    fire_map_update[f.first] = m_fire_map[f.first] / 2;
+                    next_front_local[f.first] = next_front[f.first] / 2;
                 }
-                else{
-                    local_next_front[f.first] = 255;
-                }
-                
             }
             else
             {
-                // Foyer en train de s'éteindre.
-                #pragma omp atomic update
-                m_fire_map[f.first] >>= 1;
-                std::uint8_t new_value = f.second >> 1;
-                if (new_value > 0)
+                fire_map_update[f.first] = m_fire_map[f.first] / 2;
+                next_front_local[f.first] = next_front[f.first] / 2;
+
+                if (next_front_local[f.first] == 0)
                 {
-                    local_next_front[f.first] = new_value;
+                    next_front_local.erase(f.first);
                 }
             }
-        }
-        // A chaque itération, la végétation à l'endroit d'un foyer diminue
-        #pragma omp for
-        for (int i = 0; i < fire_front_vector.size(); ++i)
-        {
-            auto& f = fire_front_vector[i];
-            if (m_vegetation_map[f.first] > 0)
-                #pragma omp atomic
-                m_vegetation_map[f.first] -= 1;
-        }
-    }
-    next_front.clear();
-    for (const auto& x : next_front_private) {
-        for (const auto& y : x) {
-            next_front[y.first] = y.second;
-        }
-    }
-    
-    m_fire_front = next_front;
-    m_time_step += 1;
-    
-    return !m_fire_front.empty();
+        } // fim do for
+    } // fim da parallel
 
-}
-// ====================================================================================================================
+    // Agora juntamos as atualizações thread-locais:
+    for (const auto& nf : next_front_locals)
+    {
+        next_front.insert(nf.begin(), nf.end());
+    }
+
+    for (const auto& fm : fire_map_updates)
+    {
+        for (const auto& kv : fm)
+        {
+            m_fire_map[kv.first] = kv.second;
+        }
+    }
+
+    // Atualiza o fire_front
+    m_fire_front = next_front;
+
+    // Paralelizamos a atualização da vegetação
+    #pragma omp parallel for
+    for (int i = 0; i < m_fire_front.size(); ++i)
+    {
+        auto it = m_fire_front.begin();
+        std::advance(it, i);
+        auto f = *it;
+
+        if (m_vegetation_map[f.first] > 0)
+        {
+            m_vegetation_map[f.first] -= 1;
+        }
+    }
+
+    m_time_step += 1;
+
+    return !m_fire_front.empty();
+}// ====================================================================================================================
 std::size_t   
 Model::get_index_from_lexicographic_indices( LexicoIndices t_lexico_indices  ) const
 {

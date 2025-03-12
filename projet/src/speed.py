@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 # Tu mets ici les résultats de tes tests
 resultats = {
-    1: "simulation_1threads.txt",
+    1: "simulation_results.txt",
     2: "simulation_2threads.txt",
     4: "simulation_4threads.txt",
     8: "simulation_8threads.txt",

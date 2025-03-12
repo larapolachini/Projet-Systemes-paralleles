@@ -225,11 +225,8 @@ int main(int nargs, char* args[])
 
     SDL_Event event;
     bool keep_running = true;
-    int cont = 0;
-    int max = 32;
-    while (keep_running && cont < max)
+    while (keep_running)
     {
-        cont++;
         // Cronometragem total
         auto start_total = std::chrono::high_resolution_clock::now();
 
