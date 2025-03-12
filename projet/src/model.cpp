@@ -78,10 +78,8 @@ bool Model::update()
 {
     auto next_front = m_fire_front;
 
-    // Criamos uma cópia thread-local para cada next_front parcial
     std::vector<std::map<int, int>> next_front_locals(omp_get_max_threads());
 
-    // Também vamos criar uma cópia thread-local do m_fire_map se necessário
     std::vector<std::map<int, double>> fire_map_updates(omp_get_max_threads());
 
     #pragma omp parallel
@@ -171,27 +169,25 @@ bool Model::update()
                     next_front_local.erase(f.first);
                 }
             }
-        } // fim do for
-    } // fim da parallel
+        } 
+    }  
 
-    // Agora juntamos as atualizações thread-locais:
+ 
     for (const auto& nf : next_front_locals)
     {
         next_front.insert(nf.begin(), nf.end());
     }
 
-    for (const auto& fm : fire_map_updates)
+    for (const auto& x : fire_map_updates)
     {
-        for (const auto& kv : fm)
+        for (const auto& y : x)
         {
-            m_fire_map[kv.first] = kv.second;
+            m_fire_map[y.first] = y.second;
         }
     }
 
-    // Atualiza o fire_front
     m_fire_front = next_front;
 
-    // Paralelizamos a atualização da vegetação
     #pragma omp parallel for
     for (int i = 0; i < m_fire_front.size(); ++i)
     {

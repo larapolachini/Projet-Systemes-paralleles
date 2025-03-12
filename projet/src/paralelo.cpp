@@ -221,7 +221,7 @@ int main(int nargs, char* args[])
     output_file << "Wind: (" << params.wind[0] << ", " << params.wind[1] << ")\n";
     output_file << "Start Fire Position: (" << params.start.row << ", " << params.start.column << ")\n";
     output_file << "-------------------------------------------\n";
-    output_file << "TimeStep\tUpdateTime(ms)\tDisplayTime(ms)\tTotalTime(ms)\n";
+    output_file << "tUpdateTime(ms)\tDisplayTime(ms)\tTotalTime(ms)\n";
 
     SDL_Event event;
     bool keep_running = true;
@@ -277,8 +277,7 @@ int main(int nargs, char* args[])
         std::cout << "Display Time: " << display_time.count() << " ms, ";
         std::cout << "Total Time: " << total_time.count() << " ms\n";
 
-        output_file << simu.time_step() << "\t"
-                    << update_time.count() << "\t"
+        output_file << update_time.count() << "\t"
                     << display_time.count() << "\t"
                     << total_time.count() << "\n";
 
