@@ -6,7 +6,7 @@
 #include <chrono>
 #include <SDL2/SDL.h>
 #include <omp.h>
-#include "model.hpp"
+#include "model3.hpp"
 #include "display.hpp"
 #include <fstream>  // Adiciona a biblioteca para arquivos
 
@@ -221,10 +221,11 @@ int main(int nargs, char* args[])
     output_file << "Wind: (" << params.wind[0] << ", " << params.wind[1] << ")\n";
     output_file << "Start Fire Position: (" << params.start.row << ", " << params.start.column << ")\n";
     output_file << "-------------------------------------------\n";
-    output_file << "tUpdateTime(ms)\tDisplayTime(ms)\tTotalTime(ms)\n";
+    output_file << "TimeStep\tUpdateTime(ms)\tDisplayTime(ms)\tTotalTime(ms)\n";
 
     SDL_Event event;
     bool keep_running = true;
+    float updateTime = 0.0f;
     while (keep_running)
     {
         // Cronometragem total
@@ -232,7 +233,7 @@ int main(int nargs, char* args[])
 
         // Atualização do modelo
         auto start_update = std::chrono::high_resolution_clock::now();
-        keep_running = simu.update();
+        keep_running = simu.update(&updateTime);
         auto end_update = std::chrono::high_resolution_clock::now();
 
         if (!keep_running) {
@@ -277,7 +278,8 @@ int main(int nargs, char* args[])
         std::cout << "Display Time: " << display_time.count() << " ms, ";
         std::cout << "Total Time: " << total_time.count() << " ms\n";
 
-        output_file << update_time.count() << "\t"
+        output_file << simu.time_step() << "\t"
+                    << update_time.count() << "\t"
                     << display_time.count() << "\t"
                     << total_time.count() << "\n";
 
