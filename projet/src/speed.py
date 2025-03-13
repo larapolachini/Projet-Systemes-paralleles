@@ -1,67 +1,62 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import glob
+import os
 
-# Tu mets ici les résultats de tes tests
-resultats = {
-    1: "simulation_results.txt",
-    2: "simulation_2threads.txt",
-    4: "simulation_4threads.txt",
-    8: "simulation_8threads.txt",
-}
+# === CONFIGURAÇÕES ===
+# Pasta onde estão seus arquivos CSV
+PASTA_CSV = '.'  # Mude para o caminho correto se estiver em outro lugar
+PADRAO_ARQUIVO = 'resultats_temps_*_threads.csv'
 
-def lire_resultats(filepath):
-    with open(filepath, 'r') as file:
-        lines = file.readlines()
+# === LISTAR E LER OS ARQUIVOS ===
+arquivos_csv = glob.glob(os.path.join(PASTA_CSV, PADRAO_ARQUIVO))
 
-    data_lines = []
-    for line in lines:
-        if line.strip() and line[0].isdigit():
-            data_lines.append(line.strip().split())
+if not arquivos_csv:
+    print("Nenhum arquivo CSV encontrado!")
+    exit()
 
-    df = pd.DataFrame(data_lines, columns=["TimeStep", "UpdateTime (ms)", "DisplayTime (ms)", "TotalTime (ms)"])
-    df["UpdateTime (ms)"] = df["UpdateTime (ms)"].astype(float)
-    df["TotalTime (ms)"] = df["TotalTime (ms)"].astype(float)
-    return df
+print(f"{len(arquivos_csv)} arquivos encontrados:\n")
+for arq in arquivos_csv:
+    print(f" - {arq}")
 
-# Sauvegarde des moyennes
-moyennes_total = {}
-moyennes_update = {}
+# === ANALISAR CADA CSV ===
+for arquivo in arquivos_csv:
+    # Extrair o número de threads do nome do arquivo (por exemplo: 8_threads.csv -> 8)
+    nome_arquivo = os.path.basename(arquivo)
+    partes = nome_arquivo.split('_')
+    num_threads = partes[2]  # resultats_temps_<N>_threads.csv -> N
 
-for threads, filepath in resultats.items():
-    df = lire_resultats(filepath)
-    
-    # Moyenne sur tous les time steps
-    moy_total = df["TotalTime (ms)"].mean()
-    moy_update = df["UpdateTime (ms)"].mean()
-    
-    moyennes_total[threads] = moy_total
-    moyennes_update[threads] = moy_update
+    print(f"\nAnalisando arquivo: {nome_arquivo} ({num_threads} threads)")
 
-# Temps séquentiels pour normalisation (1 thread)
-T1_total = moyennes_total[1]
-T1_update = moyennes_update[1]
+    # Ler CSV em um DataFrame
+    df = pd.read_csv(arquivo, sep=';', decimal='.', engine='python')
 
-# Calcul speedup
-speedup_total = {p: T1_total / t for p, t in moyennes_total.items()}
-speedup_update = {p: T1_update / t for p, t in moyennes_update.items()}
+    # === GRÁFICO 1: TEMPO DE AVANÇAMENTO POR ITERAÇÃO ===
+    plt.figure(figsize=(10, 6))
+    plt.plot(df['Iteration'], df['Temps_avancement(ms)'], marker='o', linestyle='-', label='Avancement (ms)')
+    plt.title(f"Temps d'avancement par itération ({num_threads} threads)")
+    plt.xlabel('Itération')
+    plt.ylabel('Temps (ms)')
+    plt.grid(True)
+    plt.legend()
+    plt.savefig(f'graph_avancement_{num_threads}_threads.png')
+    plt.show()
 
-# Affichage des speedups dans le terminal
-print("\n# Threads\tSpeedup Total\tSpeedup Update")
-for p in resultats.keys():
-    print(f"{p}\t\t{speedup_total[p]:.2f}x\t\t{speedup_update[p]:.2f}x")
+    # === GRÁFICO 2: TEMPO TOTAL POR ITERAÇÃO ===
+    plt.figure(figsize=(10, 6))
+    plt.plot(df['Iteration'], df['Temps_total(ms)'], marker='s', linestyle='-', color='red', label='Temps Total (ms)')
+    plt.title(f"Temps total par itération ({num_threads} threads)")
+    plt.xlabel('Itération')
+    plt.ylabel('Temps (ms)')
+    plt.grid(True)
+    plt.legend()
+    plt.savefig(f'graph_total_{num_threads}_threads.png')
+    plt.show()
 
-# ============================
-# COURBE 1 : Speedup Total
-# ============================
-plt.figure(figsize=(10, 5))
-plt.plot(speedup_total.keys(), speedup_total.values(), marker='o', label='Speedup Global')
-plt.plot(speedup_update.keys(), speedup_update.values(), marker='s', label='Speedup Update')
+    # === ESTATÍSTICAS RESUMIDAS ===
+    print(f"  ➡️ Temps moyen d'avancement : {df['Temps_avancement(ms)'].mean():.3f} ms")
+    print(f"  ➡️ Temps moyen d'affichage  : {df['Temps_affichage(ms)'].mean():.3f} ms")
+    print(f"  ➡️ Temps moyen total        : {df['Temps_total(ms)'].mean():.3f} ms")
 
-plt.title("Accélération en fonction du nombre de threads")
-plt.xlabel("Nombre de Threads")
-plt.ylabel("Speedup (x)")
-plt.legend()
-plt.grid(True)
-
-plt.savefig("speedup_threads.png")
-plt.show()
+# === OPCIONAL: GRÁFICO COMPARATIVO ENTRE THREADS ===
+# (se quiser, podemos juntar os tempos médios de todos para um gráfico só)

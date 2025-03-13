@@ -6,9 +6,9 @@
 
 namespace
 {
-    double pseudo_random( std::size_t index, std::size_t time_step )
+    double pseudo_random( std::size_t index, std::size_t time_step,std::size_t seed = 42)
     {
-        std::uint_fast32_t xi = std::uint_fast32_t(index*(time_step+1));
+        std::uint_fast32_t xi = std::uint_fast32_t(index*(time_step+1)+ seed);
         std::uint_fast32_t r  = (48271*xi)%2147483647;
         return r/2147483646.;
     }
@@ -28,7 +28,8 @@ Model::Model( double t_length, unsigned t_discretization, std::array<double,2> t
         m_wind_speed(std::sqrt(t_wind[0]*t_wind[0] + t_wind[1]*t_wind[1])),
         m_max_wind(t_max_wind),
         m_vegetation_map(t_discretization*t_discretization, 255u),
-        m_fire_map(t_discretization*t_discretization, 0u)
+        m_fire_map(t_discretization*t_discretization, 0u),
+        m_time_step(0u)
 {
     if (t_discretization == 0)
     {

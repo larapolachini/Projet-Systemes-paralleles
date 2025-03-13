@@ -3,6 +3,7 @@
 #include <array>
 #include <vector>
 #include <unordered_map>
+#include <map>
 
 /**
  * @brief 
@@ -38,7 +39,7 @@ private:
 
     double m_length;                    // Taille du carré représentant le terrain (en km)
     double m_distance;                  // Taille d'une case du terrain modélisé
-    std::size_t m_time_step;            // Dernier numéro du pas de temps calculé
+    std::size_t m_time_step=0;          // Dernier numéro du pas de temps calculé
     unsigned m_geometry;                // Taille en nombre de cases de la carte 2D
     std::array<double,2> m_wind{0.,0.}; // Vitesse et direction du vent suivant les axes x et y en km/h
     double m_wind_speed;                // Norme euclidienne de la vitesse du vent
@@ -47,5 +48,5 @@ private:
     double p1{0.}, p2{0.};
     double alphaEastWest, alphaWestEast, alphaSouthNorth, alphaNorthSouth;
 
-    std::unordered_map<std::size_t, std::uint8_t> m_fire_front;
+    std::map<std::size_t, std::uint8_t> m_fire_front;
 };

@@ -1,11 +1,10 @@
+
 #include <string>
 #include <cstdlib>
 #include <cassert>
 #include <iostream>
 #include <thread>
 #include <chrono>
-#include <SDL2/SDL.h>
-#include <omp.h>
 
 #include "model.hpp"
 #include "display.hpp"
@@ -203,57 +202,15 @@ int main( int nargs, char* args[] )
     auto displayer = Displayer::init_instance( params.discretization, params.discretization );
     auto simu = Model( params.length, params.discretization, params.wind,
                        params.start);
-
-
-
-
     SDL_Event event;
     while (simu.update())
     {
-        double update_time_ms = 0.0;
-        double display_time_ms = 0.0;
-
-        auto start_total = std::chrono::high_resolution_clock::now();
-
-        #pragma omp parallel reduction(+:update_time_ms)
-        {
-            
-            #pragma omp for
-            auto start_update = std::chrono::high_resolution_clock::now();
-            for(int i =0 ; i<8 ; i++){
-                bool time1 = simu.update();
-            }
-            auto end_update = std::chrono::high_resolution_clock::now();
-            update_time_ms += std::chrono::duration<double, std::milli>(end_update - start_update).count();
-        }
-
-
-
         if ((simu.time_step() & 31) == 0) 
             std::cout << "Time step " << simu.time_step() << "\n===============" << std::endl;
-
-        auto start_displayer = std::chrono::high_resolution_clock::now(); 
         displayer->update( simu.vegetal_map(), simu.fire_map() );
-        auto end_displayer = std::chrono::high_resolution_clock::now();
-
-        std::chrono::duration<double, std::milli> display_time = end_displayer - start_displayer;
-
         if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
             break;
-        
-        auto end_total = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> total_time = end_total - start_total;
-
         std::this_thread::sleep_for(0.1s);
-
-       
-
-
-
-        std::cout << "Update Time: " << update_time_ms<< " ms, ";
-        std::cout << "Display Time: " << display_time.count() << " ms\n";
-        std::cout << "Total Time: " << total_time.count() << " ms\n";
-
     }
     return EXIT_SUCCESS;
 }

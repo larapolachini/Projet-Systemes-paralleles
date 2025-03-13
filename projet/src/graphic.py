@@ -1,74 +1,64 @@
-import re
 import pandas as pd
 import matplotlib.pyplot as plt
+import glob
+import os
 
-# Função para ler um arquivo de resultados
-def ler_resultados(filepath):
-    with open(filepath, 'r') as file:
-        lines = file.readlines()
+# === CONFIGURAÇÕES ===
+PASTA_CSV = '.'  # Diretório onde estão os CSVs
+PADRAO_ARQUIVO = 'resultats_temps_*_threads.csv'
 
-    data_lines = []
-    pattern = re.compile(r'^\d+')  # Captura linhas que começam com um número
-    for line in lines:
-        if pattern.match(line):
-            data_lines.append(line.strip().split())
+# === LISTAR E LER OS ARQUIVOS ===
+arquivos_csv = glob.glob(os.path.join(PASTA_CSV, PADRAO_ARQUIVO))
 
-    if not data_lines:
-        print(f"Nenhum dado encontrado em {filepath}")
-        return pd.DataFrame(columns=["TimeStep", "UpdateTime (ms)", "DisplayTime (ms)", "TotalTime (ms)"])
+if not arquivos_csv:
+    print("Nenhum arquivo CSV encontrado!")
+    exit()
 
-    df = pd.DataFrame(data_lines, columns=["TimeStep", "UpdateTime (ms)", "DisplayTime (ms)", "TotalTime (ms)"])
+print(f"{len(arquivos_csv)} arquivos encontrados:\n")
+for arq in arquivos_csv:
+    print(f" - {arq}")
 
-    # Converte colunas numéricas de string para float/int
-    df["TimeStep"] = df["TimeStep"].astype(int)
-    df["UpdateTime (ms)"] = df["UpdateTime (ms)"].astype(float)
-    df["TotalTime (ms)"] = df["TotalTime (ms)"].astype(float)
+# === LER OS TEMPOS MÉDIOS TOTAIS DE CADA CSV ===
+tempos_por_threads = {}
 
-    return df
+for arquivo in arquivos_csv:
+    # Extrair número de threads do nome do arquivo
+    nome_arquivo = os.path.basename(arquivo)
+    partes = nome_arquivo.split('_')
+    num_threads = int(partes[2])  # resultats_temps_<N>_threads.csv -> N
 
-# Arquivos de simulação para diferentes números de threads
-arquivos = {
-    "1 Thread": "simulation_1threads.txt",
-    "2 Threads": "simulation_2threads.txt",
-    "4 Threads": "simulation_4threads.txt",
-    "8 Threads": "simulation_8threads.txt"
-}
+    # Ler CSV
+    df = pd.read_csv(arquivo, sep=';', decimal='.', engine='python')
 
-# Lê todos os DataFrames
-dataframes = {label: ler_resultados(path) for label, path in arquivos.items()}
+    # Calcular média do tempo total por iteração
+    tempo_medio_total = df['Temps_total(ms)'].mean()
 
-# Verifica o conteúdo lido (opcional)
-for label, df in dataframes.items():
-    print(f"\nArquivo: {label}")
-    print(df.head())
+    tempos_por_threads[num_threads] = tempo_medio_total
 
-# ===============================
-# Gráficos separados para cada config
-# ===============================
-for label, df in dataframes.items():
-    # Gera nome para o arquivo (para salvar)
-    thread_label = label.replace(" ", "_").lower()  # Exemplo: '1_thread'
+# === ORDENAR PELO NÚMERO DE THREADS ===
+threads_ordenadas = sorted(tempos_por_threads.keys())
+tempos_ordenados = [tempos_por_threads[t] for t in threads_ordenadas]
 
-    # --- Gráfico de Update Time ---
-    plt.figure(figsize=(12, 6))
-    plt.plot(df["TimeStep"], df["UpdateTime (ms)"], marker='o')
-    plt.title(f"Update Time por TimeStep - {label}")
-    plt.xlabel("TimeStep")
-    plt.ylabel("Update Time (ms)")
-    plt.grid(True)
-    plt.savefig(f"update_time_{thread_label}.png")
-    plt.show()
+# === CALCULAR SPEEDUP ===
+tempo_sequencial = tempos_por_threads[1]  # Tempo com 1 thread é a base
+speedup = [tempo_sequencial / t for t in tempos_ordenados]
 
-    # --- Gráfico de Total Time ---
-    plt.figure(figsize=(12, 6))
-    plt.plot(df["TimeStep"], df["TotalTime (ms)"], marker='o', color='orange')
-    plt.title(f"Total Time por TimeStep - {label}")
-    plt.xlabel("TimeStep")
-    plt.ylabel("Total Time (ms)")
-    plt.grid(True)
-    plt.savefig(f"total_time_{thread_label}.png")
-    plt.show()
+# === PLOTAR O GRÁFICO DE SPEEDUP ===
+plt.figure(figsize=(10, 6))
+plt.plot(threads_ordenadas, speedup, marker='o', linestyle='-', color='green', label='Speedup')
+plt.plot(threads_ordenadas, threads_ordenadas, linestyle='--', color='gray', label='Speedup ideal (linear)')
 
-    print(f"Gráficos gerados para {label}: update_time_{thread_label}.png e total_time_{thread_label}.png")
+plt.title('Gráfico de Speedup')
+plt.xlabel('Número de Threads')
+plt.ylabel('Speedup')
+plt.grid(True)
+plt.legend()
+plt.ylim(0,1.5)
 
-print("Todos os gráficos foram gerados!")
+plt.savefig('speedup_graph.png')
+plt.show()
+
+# === MOSTRAR VALORES NO TERMINAL ===
+print("\nSpeedup calculado:")
+for threads, s in zip(threads_ordenadas, speedup):
+    print(f"Threads: {threads} - Speedup: {s:.2f}")

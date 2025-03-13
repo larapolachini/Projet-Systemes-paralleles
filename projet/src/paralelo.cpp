@@ -9,6 +9,7 @@
 #include "model3.hpp"
 #include "display.hpp"
 #include <fstream>  // Adiciona a biblioteca para arquivos
+#include "map.hpp"
 
 
 
@@ -203,89 +204,116 @@ int main(int nargs, char* args[])
     if (!check_params(params)) return EXIT_FAILURE;
 
     auto displayer = Displayer::init_instance(params.discretization, params.discretization);
+
     auto simu = Model(params.length, params.discretization, params.wind, params.start);
-    int num_threads = omp_get_max_threads();
-
-    std::string output_filename = "simulation_" + std::to_string(num_threads) + "threads.txt";
-    std::ofstream output_file(output_filename);
-    if (!output_file.is_open())
-    {
-        std::cerr << "Erro ao abrir o arquivo para escrita!" << std::endl;
-        
-        return EXIT_FAILURE;
-    }
-
-    output_file << "Simulation Parameters:\n";
-    output_file << "Length: " << params.length << "\n";
-    output_file << "Discretization: " << params.discretization << "\n";
-    output_file << "Wind: (" << params.wind[0] << ", " << params.wind[1] << ")\n";
-    output_file << "Start Fire Position: (" << params.start.row << ", " << params.start.column << ")\n";
-    output_file << "-------------------------------------------\n";
-    output_file << "TimeStep\tUpdateTime(ms)\tDisplayTime(ms)\tTotalTime(ms)\n";
-
     SDL_Event event;
     bool keep_running = true;
-    float updateTime = 0.0f;
-    while (keep_running)
-    {
-        // Cronometragem total
-        auto start_total = std::chrono::high_resolution_clock::now();
+    int step_count = 0;
+    int max_steps = 100;
+    float up = 0.0f;
+    double temps_total_avancement = 0.0;
+    double temps_total_affichage = 0.0;
+    unsigned long nb_iterations = 0;
+    std::vector<double> temps_avancement_par_iteration;
+    std::vector<double> temps_affichage_par_iteration;
+    int max_threads = omp_get_max_threads();
 
-        // Atualização do modelo
+    
+    while (simu.update(&up) && nb_iterations < 100)
+    {
+        //auto start_total = std::chrono::high_resolution_clock::now();
+
         auto start_update = std::chrono::high_resolution_clock::now();
-        keep_running = simu.update(&updateTime);
+        bool keep_running = simu.update(&up);  // Só chama uma vez aqui!
         auto end_update = std::chrono::high_resolution_clock::now();
 
-        if (!keep_running) {
-            std::cout << "Simulação finalizada antecipadamente no time_step " << simu.time_step() << std::endl;
-            break;
-        }
-
         std::chrono::duration<double, std::milli> update_time = end_update - start_update;
-
-        // Exibição periódica a cada 32 passos
-        if ((simu.time_step() & 31) == 0)
-        {
-            std::cout << "Time step " << simu.time_step() << "\n===============" << std::endl;
-            output_file << "\nTime step " << simu.time_step() << "\n===============" << std::endl;
-        }
-
-        // Atualiza a tela
-        auto vegetal = simu.vegetal_map();
-        auto fire = simu.fire_map();
-
-        if (vegetal.empty() || fire.empty()) {
-            std::cerr << "Mapas vazios! Encerrando simulação." << std::endl;
-            break;
-        }
+        temps_total_avancement += update_time.count();
 
         auto start_displayer = std::chrono::high_resolution_clock::now();
-        displayer->update(vegetal, fire);
+        displayer->update(simu.vegetal_map(), simu.fire_map());
         auto end_displayer = std::chrono::high_resolution_clock::now();
 
         std::chrono::duration<double, std::milli> display_time = end_displayer - start_displayer;
+        temps_total_affichage += display_time.count();
 
-        // Evento SDL para fechar janela
+        nb_iterations++;
+
+
+        temps_avancement_par_iteration.push_back(update_time.count());
+        temps_affichage_par_iteration.push_back(display_time.count());
+
+
+
+
+        if ((simu.time_step() & 31) == 0)
+        {
+            std::cout << "Time step " << simu.time_step() << "\n===============" << std::endl;
+             // Affichage des moyennes à l'instant T
+            std::cout << "Moyenne avancement : " 
+                << (temps_total_avancement / nb_iterations) * 1000.0 
+                << " ms" << std::endl;
+            std::cout << "Moyenne affichage : " 
+                << (temps_total_affichage / nb_iterations) * 1000.0 
+                << " ms" << std::endl;
+        }
+
         if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
             break;
 
-        auto end_total = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> total_time = end_total - start_total;
-
         std::this_thread::sleep_for(0.1s);
 
-        std::cout << "Update Time: " << update_time.count() << " ms, ";
-        std::cout << "Display Time: " << display_time.count() << " ms, ";
-        std::cout << "Total Time: " << total_time.count() << " ms\n";
-
-        output_file << simu.time_step() << "\t"
-                    << update_time.count() << "\t"
-                    << display_time.count() << "\t"
-                    << total_time.count() << "\n";
+        step_count++;
 
     }
 
-    output_file << "\nSimulation Ended.\n";
-    output_file.close();
+    std::string filename = "resultats_temps_" + std::to_string(max_threads) + "_threads.csv";
+    std::ofstream fichier_csv(filename);
+
+    if (fichier_csv.is_open())
+    {
+        // En-têtes
+        fichier_csv << "Iteration;Temps_avancement(ms);Temps_affichage(ms);Temps_total(ms)\n";
+    
+        for (size_t i = 0; i < temps_avancement_par_iteration.size(); ++i)
+        {
+            double total = temps_avancement_par_iteration[i] + temps_affichage_par_iteration[i];
+            fichier_csv << i << "; "
+                        << temps_avancement_par_iteration[i] << "; "
+                        << temps_affichage_par_iteration[i] << "; "
+                        << total << "\n";
+        }
+    
+        fichier_csv.close();
+        std::cout << "Fichier CSV 'resultats_temps.csv' généré avec succès !\n";
+    }
+    else
+    {
+        std::cerr << "Erreur à l'ouverture du fichier CSV !" << std::endl;
+    }
+
+
+    std::cout << "Simulation terminée !" << std::endl;
+    std::cout << "Nombre d'iterations : " << nb_iterations << std::endl;
+
+    std::cout << "Temps moyen d'avancement : " 
+              << (temps_total_avancement / nb_iterations) * 1000.0 
+              << " ms" << std::endl;
+
+    std::cout << "Temps moyen d'affichage : " 
+              << (temps_total_affichage / nb_iterations) * 1000.0 
+              << " ms" << std::endl;
+
+    std::cout << "Temps moyen total par pas de temps : " 
+              << ((temps_total_avancement + temps_total_affichage) / nb_iterations) * 1000.0 
+              << " ms" << std::endl;
+
+    // Comparar com arquivos sequenciais
+    compare_map_with_file("fire_map_seq.txt", simu.fire_map());
+    compare_map_with_file("vegetation_map_seq.txt", simu.vegetal_map());
+    save_map_to_file("fire_map_seq4.txt", simu.fire_map());
+    save_map_to_file("vegetation_map_seq4.txt", simu.vegetal_map());
+    
     return EXIT_SUCCESS;
 }
+
