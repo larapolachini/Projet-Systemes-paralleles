@@ -1,64 +1,59 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import glob
-import os
 
-# === CONFIGURAÇÕES ===
-PASTA_CSV = '.'  # Diretório onde estão os CSVs
-PADRAO_ARQUIVO = 'resultats_temps_*_threads.csv'
+# Procura por todos os arquivos CSV que começam com "resultats_temps"
+csv_files = glob.glob("/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps*.csv")
 
-# === LISTAR E LER OS ARQUIVOS ===
-arquivos_csv = glob.glob(os.path.join(PASTA_CSV, PADRAO_ARQUIVO))
+if not csv_files:
+    print("Nenhum arquivo CSV encontrado.")
+else:
+    for file in csv_files:
+        # Lê o CSV usando ";" como delimitador
+        df = pd.read_csv(file, sep=";")
+        # Remove espaços extras nos nomes das colunas
+        df.columns = [col.strip() for col in df.columns]
+        
+        # Define o eixo X: utiliza "TimeStep" se existir, senão, utiliza "Iteration"
+        x_column = "TimeStep" if "TimeStep" in df.columns else "Iteration"
 
-if not arquivos_csv:
-    print("Nenhum arquivo CSV encontrado!")
-    exit()
+        # Remove os dados do iterador 0 (primeira linha) ANTES de qualquer processamento
+        df = df.iloc[1:].reset_index(drop=True)
+        
+        # Multiplica os valores de tempo por 100
+        df['Temps_avancement(ms)'] = df['Temps_avancement(ms)'] * 100
+        df['Temps_affichage(ms)']  = df['Temps_affichage(ms)'] * 100
+        df['Temps_total(ms)']      = df['Temps_total(ms)'] * 100
 
-print(f"{len(arquivos_csv)} arquivos encontrados:\n")
-for arq in arquivos_csv:
-    print(f" - {arq}")
-
-# === LER OS TEMPOS MÉDIOS TOTAIS DE CADA CSV ===
-tempos_por_threads = {}
-
-for arquivo in arquivos_csv:
-    # Extrair número de threads do nome do arquivo
-    nome_arquivo = os.path.basename(arquivo)
-    partes = nome_arquivo.split('_')
-    num_threads = int(partes[2])  # resultats_temps_<N>_threads.csv -> N
-
-    # Ler CSV
-    df = pd.read_csv(arquivo, sep=';', decimal='.', engine='python')
-
-    # Calcular média do tempo total por iteração
-    tempo_medio_total = df['Temps_total(ms)'].mean()
-
-    tempos_por_threads[num_threads] = tempo_medio_total
-
-# === ORDENAR PELO NÚMERO DE THREADS ===
-threads_ordenadas = sorted(tempos_por_threads.keys())
-tempos_ordenados = [tempos_por_threads[t] for t in threads_ordenadas]
-
-# === CALCULAR SPEEDUP ===
-tempo_sequencial = tempos_por_threads[1]  # Tempo com 1 thread é a base
-speedup = [tempo_sequencial / t for t in tempos_ordenados]
-
-# === PLOTAR O GRÁFICO DE SPEEDUP ===
-plt.figure(figsize=(10, 6))
-plt.plot(threads_ordenadas, speedup, marker='o', linestyle='-', color='green', label='Speedup')
-plt.plot(threads_ordenadas, threads_ordenadas, linestyle='--', color='gray', label='Speedup ideal (linear)')
-
-plt.title('Gráfico de Speedup')
-plt.xlabel('Número de Threads')
-plt.ylabel('Speedup')
-plt.grid(True)
-plt.legend()
-plt.ylim(0,1.5)
-
-plt.savefig('speedup_graph.png')
-plt.show()
-
-# === MOSTRAR VALORES NO TERMINAL ===
-print("\nSpeedup calculado:")
-for threads, s in zip(threads_ordenadas, speedup):
-    print(f"Threads: {threads} - Speedup: {s:.2f}")
+        # Calcula a média móvel (rolling) com janela de 10, após remover o primeiro iterador
+        df['Avancement_Rolling'] = df['Temps_avancement(ms)'].rolling(window=10, center=True, min_periods=1).mean()
+        df['Affichage_Rolling']  = df['Temps_affichage(ms)'].rolling(window=10, center=True, min_periods=1).mean()
+        df['Total_Rolling']      = df['Temps_total(ms)'].rolling(window=10, center=True, min_periods=1).mean()
+        
+        # Cria a figura com tamanho maior e boa resolução
+        
+        # Plota apenas as curvas suavizadas
+        plt.plot(df[x_column], df['Avancement_Rolling'], linewidth=2, color='blue', 
+                 label='Avancement (ms) [suavizado]')
+        plt.plot(df[x_column], df['Affichage_Rolling'], linewidth=2, color='orange', 
+                 label='Affichage (ms) [suavizado]')
+        plt.plot(df[x_column], df['Total_Rolling'], linewidth=2, color='green', 
+                 label='Total (ms) [suavizado]')
+        
+        plt.xlabel(x_column)
+        plt.ylabel("Tempo (ms) x 100 (média móvel)")
+        plt.title(f"Suavização dos Tempos (x100) - {file}")
+        plt.legend()
+        plt.grid(True)
+        
+        # Define o limite do eixo y fixo (exemplo: 0 a 1200)
+        plt.ylim(0,600)
+        
+        # Salva e exibe o gráfico
+        output_file = file.replace(".csv", "_rolling_no_first.png")
+        import os
+        folder = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Imagens"
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        plt.savefig(os.path.join(folder, "_rolling_no_first.png"))
+        plt.show() 

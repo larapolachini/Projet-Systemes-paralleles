@@ -217,8 +217,10 @@ int main(int nargs, char* args[])
     unsigned long nb_iterations = 0;
     std::vector<double> temps_avancement_par_iteration;
     std::vector<double> temps_affichage_par_iteration;
+    std::vector<int> time_steps;
+
     
-    while (simu.update() && nb_iterations<100)
+    while (simu.update() && nb_iterations < 1001)
     {
         //auto start_total = std::chrono::high_resolution_clock::now();
 
@@ -236,11 +238,16 @@ int main(int nargs, char* args[])
         std::chrono::duration<double, std::milli> display_time = end_displayer - start_displayer;
         temps_total_affichage += display_time.count();
 
+        int current_timestep = simu.time_step();
+        time_steps.push_back(current_timestep);
+
         nb_iterations++;
 
 
         temps_avancement_par_iteration.push_back(update_time.count());
         temps_affichage_par_iteration.push_back(display_time.count());
+        std::vector<int> time_steps;
+
 
 
 
@@ -262,22 +269,21 @@ int main(int nargs, char* args[])
 
         std::this_thread::sleep_for(0.1s);
 
-        step_count++;
-
     }
 
 
-    std::ofstream fichier_csv("resultats_temps.csv");
+    std::ofstream fichier_csv("/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps.csv");
 
     if (fichier_csv.is_open())
     {
         // En-têtes
-        fichier_csv << "Iteration;Temps_avancement(ms);Temps_affichage(ms);Temps_total(ms)\n";
+        fichier_csv << "Iteration;TimeStep;Temps_avancement(ms);Temps_affichage(ms);Temps_total(ms)\n";
     
         for (size_t i = 0; i < temps_avancement_par_iteration.size(); ++i)
         {
             double total = temps_avancement_par_iteration[i] + temps_affichage_par_iteration[i];
             fichier_csv << i << "; "
+                        << time_steps[i] << "; "
                         << temps_avancement_par_iteration[i] << "; "
                         << temps_affichage_par_iteration[i] << "; "
                         << total << "\n";
@@ -308,9 +314,7 @@ int main(int nargs, char* args[])
               << " ms" << std::endl;
 
 
-    save_map_to_file("fire_map_seq2.txt", simu.fire_map());
-    save_map_to_file("vegetation_map_seq2.txt", simu.vegetal_map());
-    
+
 
 
     

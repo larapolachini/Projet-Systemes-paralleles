@@ -6,7 +6,7 @@
 #include <chrono>
 #include <SDL2/SDL.h>
 #include <omp.h>
-#include "model3.hpp"
+#include "model.hpp"
 #include "display.hpp"
 #include <fstream>  // Adiciona a biblioteca para arquivos
 #include "map.hpp"
@@ -217,14 +217,15 @@ int main(int nargs, char* args[])
     std::vector<double> temps_avancement_par_iteration;
     std::vector<double> temps_affichage_par_iteration;
     int max_threads = omp_get_max_threads();
+    std::vector<int> time_steps;
 
     
-    while (simu.update(&up) && nb_iterations < 100)
+    while (simu.update() && nb_iterations < 283 )
     {
         //auto start_total = std::chrono::high_resolution_clock::now();
 
         auto start_update = std::chrono::high_resolution_clock::now();
-        bool keep_running = simu.update(&up);  // Só chama uma vez aqui!
+        bool keep_running = simu.update();  // Só chama uma vez aqui!
         auto end_update = std::chrono::high_resolution_clock::now();
 
         std::chrono::duration<double, std::milli> update_time = end_update - start_update;
@@ -236,6 +237,9 @@ int main(int nargs, char* args[])
 
         std::chrono::duration<double, std::milli> display_time = end_displayer - start_displayer;
         temps_total_affichage += display_time.count();
+
+        int current_timestep = simu.time_step();
+        time_steps.push_back(current_timestep);
 
         nb_iterations++;
 
@@ -262,25 +266,24 @@ int main(int nargs, char* args[])
             break;
 
         std::this_thread::sleep_for(0.1s);
-
-        step_count++;
-
     }
 
-    std::string filename = "resultats_temps_" + std::to_string(max_threads) + "_threads.csv";
+    std::string filename = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps_" 
+    + std::to_string(max_threads) + "_threads.csv";    
     std::ofstream fichier_csv(filename);
 
     if (fichier_csv.is_open())
     {
         // En-têtes
-        fichier_csv << "Iteration;Temps_avancement(ms);Temps_affichage(ms);Temps_total(ms)\n";
+        fichier_csv << "Iteration;TimeStep;Temps_avancement(ms);Temps_affichage(ms);Temps_total(ms)\n";
     
         for (size_t i = 0; i < temps_avancement_par_iteration.size(); ++i)
         {
             double total = temps_avancement_par_iteration[i] + temps_affichage_par_iteration[i];
             fichier_csv << i << "; "
-                        << temps_avancement_par_iteration[i] << "; "
-                        << temps_affichage_par_iteration[i] << "; "
+                        << time_steps[i]<<" ; "
+                        << temps_avancement_par_iteration[i] << " ; "
+                        << temps_affichage_par_iteration[i] << " ; "
                         << total << "\n";
         }
     
@@ -309,10 +312,10 @@ int main(int nargs, char* args[])
               << " ms" << std::endl;
 
     // Comparar com arquivos sequenciais
-    compare_map_with_file("fire_map_seq.txt", simu.fire_map());
-    compare_map_with_file("vegetation_map_seq.txt", simu.vegetal_map());
-    save_map_to_file("fire_map_seq4.txt", simu.fire_map());
-    save_map_to_file("vegetation_map_seq4.txt", simu.vegetal_map());
+    //compare_map_with_file("fire_map_seq.txt", simu.fire_map());
+    //compare_map_with_file("vegetation_map_seq.txt", simu.vegetal_map());
+    //save_map_to_file("fire_map_seq4.txt", simu.fire_map());
+    //save_map_to_file("vegetation_map_seq4.txt", simu.vegetal_map());
     
     return EXIT_SUCCESS;
 }
