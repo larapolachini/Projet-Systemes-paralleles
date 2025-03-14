@@ -7,7 +7,7 @@ from scipy.signal import savgol_filter
 
 csv_files = glob.glob("/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps*.csv")
 if not csv_files:
-    print("Nenhum arquivo CSV encontrado.")
+    print("Aucun fichier CSV trouvé.")
     exit()
 
 dataframes = {}

@@ -3,33 +3,34 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.polynomial.polynomial import Polynomial
 
-# Caminho da pasta dos arquivos
+# Chemin du dossier de fichiers
 base_dir = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau"
+#base_dir = "/home/larapolachini/Projet-Systemes-paralleles/projet/src/Tableau"
 
-# Arquivos com os resultados
+# Fichiers avec résultats
 files = {
-    "Sequencial": f"{base_dir}/resultats_temps_MPI_1_seq",
+    "Sequencial": f"{base_dir}/results_mpi_1",
     "2 Threads": f"{base_dir}/resultats_temps_MPI_1_threads_2.csv",
     "4 Threads": f"{base_dir}/resultats_temps_MPI_1_threads_4.csv",
     "8 Threads": f"{base_dir}/resultats_temps_MPI_1_threads_8.csv"
 }
 
-# Função para plotar tempo total por iteração com ajuste polinomial (grau 2)
+# Fonction permettant de tracer le temps total par itération avec ajustement polynomial (degré 2)
 def plot_tempo_iteracao(df, titulo):
-    # Dados das iterações e tempos
+    # Données et temps d'itération
     iterations = df["Iteration"]
     tempos_totais = df["Temps_total(ms)"]
 
-    # Ajuste polinomial de grau 2
+    # Ajustement d'un polynôme de degré 2
     ajuste_poly = Polynomial.fit(iterations, tempos_totais, deg=2).convert()
     coefs = ajuste_poly.coef
-    p = np.poly1d(coefs[::-1])  # Inverter os coeficientes para np.poly1d
+    p = np.poly1d(coefs[::-1])  # Inverser les coefficients pour np.poly1d
 
-    # Gera pontos para a curva de ajuste
+    # Générer des points pour la courbe d'ajustement
     x_fit = np.linspace(iterations.min(), iterations.max(), 500)
     y_fit = p(x_fit)
 
-    # Plot do gráfico
+    # Tracé du graphique
     plt.figure(figsize=(8, 6))
     plt.scatter(iterations, tempos_totais, color='blue', alpha=0.5, label="Dados Reais")
     plt.plot(x_fit, y_fit, color='red', linestyle='--', label="Ajuste Polinomial (grau 2)")
@@ -42,19 +43,19 @@ def plot_tempo_iteracao(df, titulo):
     plt.grid(True)
     plt.show()
 
-# Carrega os dados e gera os gráficos
+# Charger les données et générer les graphiques
 for titulo, filepath in files.items():
-    # Lê o CSV (separador ";")
+    # Lire le CSV (séparateur ";")
     df = pd.read_csv(filepath, sep=';', engine='python')
     
-    # Gera o gráfico com ajuste polinomial
+    # Générer le graphique avec ajustement polynomial
     plot_tempo_iteracao(df, titulo)
 
 
-# Caminho da pasta dos arquivos
+# Chemin du dossier de fichiers
 base_dir = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau"
 
-# Arquivos com os resultados
+# Fichiers avec résultats
 files = {
     "Sequencial": f"{base_dir}/resultats_temps_MPI_1_seq",
     "2 Threads": f"{base_dir}/resultats_temps_MPI_1_threads_2.csv",
@@ -62,7 +63,7 @@ files = {
     "8 Threads": f"{base_dir}/resultats_temps_MPI_1_threads_8.csv"
 }
 
-# Cores diferentes para cada linha no gráfico
+# Différentes couleurs pour chaque ligne du graphique
 colors = {
     "Sequencial": "blue",
     "2 Threads": "green",
@@ -70,31 +71,31 @@ colors = {
     "8 Threads": "red"
 }
 
-# Figura única com todos os ajustes polinomiais
+# Figure unique avec tous les ajustements polynomiaux
 plt.figure(figsize=(10, 7))
 
-# Loop para processar cada conjunto de dados
+# Boucle pour traiter chaque ensemble de données
 for titulo, filepath in files.items():
-    # Lê o CSV (separador ";")
+    # Lire le CSV (séparateur ";")
     df = pd.read_csv(filepath, sep=';', engine='python')
 
-    # Dados de iteração e tempo total
+    # Données d'itération et temps total
     iterations = df["Iteration"]
     tempos_totais = df["Temps_total(ms)"]
 
-    # Ajuste polinomial de grau 2
+    # Ajustement d'un polynôme de degré 2
     ajuste_poly = Polynomial.fit(iterations, tempos_totais, deg=2).convert()
     coefs = ajuste_poly.coef
     p = np.poly1d(coefs[::-1])
 
-    # Gera pontos para a curva
+    # Générer des points pour la courbe
     x_fit = np.linspace(iterations.min(), iterations.max(), 500)
     y_fit = p(x_fit)
 
-    # Plot da curva de ajuste
+    # Tracé de la courbe d'ajustement
     plt.plot(x_fit, y_fit, linestyle='--', color=colors[titulo], label=f"{titulo} (ajuste grau 2)")
 
-# Configuração do gráfico
+# Configuration du graphique
 plt.title("Comparação: Tempo Total por Iteração com Ajuste Polinomial")
 plt.xlabel("Iteração")
 plt.ylabel("Tempo Total (ms)")

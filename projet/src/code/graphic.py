@@ -2,37 +2,37 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import glob
 
-# Procura por todos os arquivos CSV que começam com "resultats_temps"
+# Rechercher tous les fichiers CSV commençant par "resultats_temps"
 csv_files = glob.glob("/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps*.csv")
 
 if not csv_files:
     print("Nenhum arquivo CSV encontrado.")
 else:
     for file in csv_files:
-        # Lê o CSV usando ";" como delimitador
+        # Lire CSV en utilisant ";" comme délimiteur
         df = pd.read_csv(file, sep=";")
-        # Remove espaços extras nos nomes das colunas
+        # Supprimer les espaces supplémentaires dans les noms de colonnes
         df.columns = [col.strip() for col in df.columns]
         
-        # Define o eixo X: utiliza "TimeStep" se existir, senão, utiliza "Iteration"
+        # Définit l'axe X : utilise « TimeStep » s'il existe, sinon, utilise « Iteration »
         x_column = "TimeStep" if "TimeStep" in df.columns else "Iteration"
 
-        # Remove os dados do iterador 0 (primeira linha) ANTES de qualquer processamento
+        # Supprimer les données de l'itérateur 0 (première ligne) AVANT tout traitement
         df = df.iloc[1:].reset_index(drop=True)
         
-        # Multiplica os valores de tempo por 100
+        # Multipliez les valeurs de temps par 100
         df['Temps_avancement(ms)'] = df['Temps_avancement(ms)'] * 100
         df['Temps_affichage(ms)']  = df['Temps_affichage(ms)'] * 100
         df['Temps_total(ms)']      = df['Temps_total(ms)'] * 100
 
-        # Calcula a média móvel (rolling) com janela de 10, após remover o primeiro iterador
+        # Calculer la moyenne mobile (rolling) avec une fenêtre de 10, après avoir supprimé le premier itérateur
         df['Avancement_Rolling'] = df['Temps_avancement(ms)'].rolling(window=10, center=True, min_periods=1).mean()
         df['Affichage_Rolling']  = df['Temps_affichage(ms)'].rolling(window=10, center=True, min_periods=1).mean()
         df['Total_Rolling']      = df['Temps_total(ms)'].rolling(window=10, center=True, min_periods=1).mean()
         
-        # Cria a figura com tamanho maior e boa resolução
+        # Crée la figure avec une taille plus grande et une bonne résolution
         
-        # Plota apenas as curvas suavizadas
+        # Tracer uniquement les courbes lissées
         plt.plot(df[x_column], df['Avancement_Rolling'], linewidth=2, color='blue', 
                  label='Avancement (ms) [suavizado]')
         plt.plot(df[x_column], df['Affichage_Rolling'], linewidth=2, color='orange', 
@@ -46,10 +46,10 @@ else:
         plt.legend()
         plt.grid(True)
         
-        # Define o limite do eixo y fixo (exemplo: 0 a 1200)
+        # Définit la limite fixe de l'axe des y (exemple : 0 à 600)
         plt.ylim(0,600)
         
-        # Salva e exibe o gráfico
+        # Enregistrer et afficher le graphique
         output_file = file.replace(".csv", "_rolling_no_first.png")
         import os
         folder = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Imagens"

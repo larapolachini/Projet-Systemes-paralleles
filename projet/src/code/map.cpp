@@ -3,7 +3,7 @@
 #include <iostream>
 #include <numeric>
 
-// Salva o mapa inteiro num arquivo (cada valor separado por espaço)
+// Enregistrer la carte entière dans un fichier (chaque valeur séparée par un espace)
 void save_map_to_file(const std::string& filename, const std::vector<uint8_t>& map) {
     std::ofstream file(filename);
     if (!file.is_open()) {
@@ -20,7 +20,7 @@ void save_map_to_file(const std::string& filename, const std::vector<uint8_t>& m
     std::cout << "Mapa salvo em: " << filename << std::endl;
 }
 
-// Compara um mapa atual com o salvo em arquivo
+// Compare une carte actuelle avec celle enregistrée dans le fichier
 bool compare_map_with_file(const std::string& filename, const std::vector<uint8_t>& map) {
     std::ifstream file(filename);
     if (!file.is_open()) {

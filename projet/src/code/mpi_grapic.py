@@ -4,6 +4,7 @@ import os
 
 # Diretório dos arquivos
 base_dir = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau"
+#base_dir = "/home/larapolachini/Projet-Systemes-paralleles/projet/src/Tableau"
 
 # Arquivos (ajuste se os nomes forem diferentes)
 arquivos = {

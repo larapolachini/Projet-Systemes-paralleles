@@ -203,7 +203,7 @@ int main(int nargs, char* args[])
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    num_thr = omp_get_max_threads();
+    int max_threads = omp_get_max_threads();
 
     std::shared_ptr<Displayer> displayer;  // Declara o ponteiro globalmente
     auto params = parse_arguments(nargs - 1, &args[1]);
@@ -226,23 +226,20 @@ int main(int nargs, char* args[])
     std::ofstream fichier_txt(output_file);  
     if (rank == 0)
     {
-        output_file.open(output_file);
-        if (!output_file.is_open())
+        fichier_txt.open(output_file);
+        if (!fichier_txt.is_open())
         {
             std::cerr << "Erro ao abrir o arquivo para escrita!" << std::endl;
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
 
-
-    
-
-    output_file << "Simulation Parameters:\n";
-    output_file << "Length: " << params.length << "\n";
-    output_file << "Discretization: " << params.discretization << "\n";
-    output_file << "Wind: (" << params.wind[0] << ", " << params.wind[1] << ")\n";
-    output_file << "Start Fire Position: (" << params.start.row << ", " << params.start.column << ")\n";
-    output_file << "-------------------------------------------\n";
-    output_file << "TimeStep;Temps_avancement(ms);Temps_affichage(ms);Temps_total(ms)\n";
+        fichier_txt << "Simulation Parameters:\n";
+        fichier_txt << "Length: " << params.length << "\n";
+        fichier_txt << "Discretization: " << params.discretization << "\n";
+        fichier_txt << "Wind: (" << params.wind[0] << ", " << params.wind[1] << ")\n";
+        fichier_txt << "Start Fire Position: (" << params.start.row << ", " << params.start.column << ")\n";
+        fichier_txt << "-------------------------------------------\n";
+        fichier_txt << "TimeStep;Temps_avancement(ms);Temps_affichage(ms);Temps_total(ms)\n";
 
     }
 
@@ -274,11 +271,11 @@ int main(int nargs, char* args[])
 
             if(simu.time_step() % 31 == 0)
             {
-                output_file << "\nTime step " << simu.time_step() << "\n";
-                output_file << "===============\n";
+                fichier_txt << "\nTime step " << simu.time_step() << "\n";
+                fichier_txt << "===============\n";
             }
 
-            output_file << simu.time_step() << "\t" << update_time.count() << "\t" << display_time.count() << "\t" << total_time << "\n";
+            fichier_txt << simu.time_step() << "\t" << update_time.count() << "\t" << display_time.count() << "\t" << total_time << "\n";
 
             if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
                 keep_running = false;
@@ -290,8 +287,8 @@ int main(int nargs, char* args[])
 
     if (rank == 0)
     {
-        output_file << "\nSimulation ended. \n ";
-        output_file.close();
+        fichier_txt << "\nSimulation ended. \n ";
+        fichier_txt.close();
     }
 
     MPI_Finalize();

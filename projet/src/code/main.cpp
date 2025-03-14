@@ -4,7 +4,7 @@
 #include <array>
 #include "model.hpp"
 
-// Atalho para LexicoIndices
+// Raccourci vers LexicoIndices
 using LexicoIndices = Model::LexicoIndices;
 
 void save_map(const std::string &filename, const std::vector<uint8_t> &map, unsigned geometry)
