@@ -76,13 +76,13 @@ Model::Model( double t_length, unsigned t_discretization, std::array<double,2> t
 bool Model::update() {
     auto next_front = m_fire_front;
 
-    // Lista de células em chamas (ordem determinística)
+    // Liste des cellules en cours de gravure (ordre déterministe)
     std::vector<std::size_t> fire_indices;
     for (const auto& f : m_fire_front) {
         fire_indices.push_back(f.first);
     }
 
-    // Passo 1: Propagação (gerar novos focos de incêndio)
+    // Étape 1 : Propagation (générer de nouveaux incendies)
     std::unordered_map<std::size_t, uint8_t> propagated_cells;
 
     #pragma omp parallel
@@ -120,7 +120,7 @@ bool Model::update() {
                 propagate(f_first - 1, alphaWestEast, f_first * 13427 * 13427 * 13427 + m_time_step);
         }
 
-        // Merge seguro dos novos incêndios
+        // Fusionner à l'abri des nouveaux incendies
         #pragma omp critical
         {
             for (const auto& pair : local_propagation) {
@@ -129,14 +129,14 @@ bool Model::update() {
         }
     }
 
-    // Passo 2: Atualização de intensidade (enfraquecimento + propagação)
+    // Étape 2 : Mise à jour de l'intensité (affaiblissement + propagation)
     std::unordered_map<std::size_t, uint8_t> updated_front;
 
     for (const auto& f : m_fire_front) {
         std::size_t idx = f.first;
         uint8_t intensity = f.second;
 
-        // Enfraquece o fogo
+        // Affaiblit le feu
         uint8_t new_intensity = intensity;
 
         if (intensity == 255) {
@@ -153,12 +153,12 @@ bool Model::update() {
         }
     }
 
-    // Passo 3: Adiciona as novas células propagadas
+    // Étape 3 : ajouter les nouvelles cellules ensemencées
     for (const auto& p : propagated_cells) {
-        updated_front[p.first] = 255;  // sempre 255 ao propagar
+        updated_front[p.first] = 255;  // toujours 255 lors de la propagation
     }
 
-    // Passo 4: Atualiza o m_fire_map de forma ordenada (para consistência)
+    // Étape 4 : mettre à jour m_fire_map de manière ordonnée (pour plus de cohérence)
     std::vector<std::size_t> ordered_keys;
     for (const auto& p : updated_front) {
         ordered_keys.push_back(p.first);
@@ -178,7 +178,7 @@ bool Model::update() {
         }
     }
 
-    // Passo 5: Atualiza a vegetação nas células com fogo
+    // Étape 5 : Mettre à jour la végétation dans les cellules avec le feu
     #pragma omp parallel for
     for (size_t i = 0; i < ordered_keys.size(); i++) {
         std::size_t idx = ordered_keys[i];

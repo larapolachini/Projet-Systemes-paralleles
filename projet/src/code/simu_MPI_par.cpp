@@ -9,7 +9,7 @@
 #include <omp.h>
 #include "model.hpp"
 #include "display.hpp"
-#include <fstream>  // Adiciona a biblioteca para arquivos
+#include <fstream>   // Ajouter la bibliothèque aux fichiers
 
 
 
@@ -205,7 +205,7 @@ int main(int nargs, char* args[])
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     int max_threads = omp_get_max_threads();
 
-    std::shared_ptr<Displayer> displayer;  // Declara o ponteiro globalmente
+    std::shared_ptr<Displayer> displayer;  // Déclarer le pointeur globalement
     auto params = parse_arguments(nargs - 1, &args[1]);
     if (rank == 0)
     {
@@ -221,15 +221,19 @@ int main(int nargs, char* args[])
 
     auto simu = Model(params.length, params.discretization, params.wind, params.start);
 
-    std::string output_file = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/Tableau_Part2/results_mpi" 
-    + std::to_string(max_threads) + "_threads.txt";    
+    //std::string output_file = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/Tableau_Part2/results_mpi" 
+    //+ std::to_string(max_threads) + "_threads.txt";    
+    std::string output_file = "/home/larapolachini/Projet-Systemes-paralleles/projet/src/Tableau/Tableau_Part2/results_mpi" 
+    + std::to_string(max_threads) + "_threads.txt";
+
     std::ofstream fichier_txt(output_file);  
+    
     if (rank == 0)
     {
-        fichier_txt.open(output_file);
+
         if (!fichier_txt.is_open())
         {
-            std::cerr << "Erro ao abrir o arquivo para escrita!" << std::endl;
+            std::cerr << "Erreur lors de l'ouverture du fichier pour l'écriture!" << std::endl;
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
 
@@ -250,7 +254,7 @@ int main(int nargs, char* args[])
         auto start_total = std::chrono::high_resolution_clock::now();
 
         auto start_update = std::chrono::high_resolution_clock::now();
-        keep_running = simu.update();  // Só chama uma vez aqui!
+        keep_running = simu.update();  // Appelez ici une seule fois !
         auto end_update = std::chrono::high_resolution_clock::now();
 
         std::chrono::duration<double, std::milli> update_time = end_update - start_update;

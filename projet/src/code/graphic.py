@@ -4,9 +4,11 @@ import glob
 
 # Rechercher tous les fichiers CSV commençant par "resultats_temps"
 csv_files = glob.glob("/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps*.csv")
+#csv_files = glob.glob("/home/larapolachini/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps*.csv")
+
 
 if not csv_files:
-    print("Nenhum arquivo CSV encontrado.")
+    print("Aucun fichier CSV trouvé.")
 else:
     for file in csv_files:
         # Lire CSV en utilisant ";" comme délimiteur
@@ -34,15 +36,15 @@ else:
         
         # Tracer uniquement les courbes lissées
         plt.plot(df[x_column], df['Avancement_Rolling'], linewidth=2, color='blue', 
-                 label='Avancement (ms) [suavizado]')
+                 label='Avancement (ms) [softened]')
         plt.plot(df[x_column], df['Affichage_Rolling'], linewidth=2, color='orange', 
-                 label='Affichage (ms) [suavizado]')
+                 label='Affichage (ms) [softened]')
         plt.plot(df[x_column], df['Total_Rolling'], linewidth=2, color='green', 
-                 label='Total (ms) [suavizado]')
+                 label='Total (ms) [softened]')
         
         plt.xlabel(x_column)
-        plt.ylabel("Tempo (ms) x 100 (média móvel)")
-        plt.title(f"Suavização dos Tempos (x100) - {file}")
+        plt.ylabel("Temps (ms) x 100 (moyenne mobile)")
+        plt.title(f"Adoucissement des temps (x100) - {file}")
         plt.legend()
         plt.grid(True)
         
@@ -53,6 +55,7 @@ else:
         output_file = file.replace(".csv", "_rolling_no_first.png")
         import os
         folder = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Imagens"
+        #folder = "/home/larapolachini/Projet-Systemes-paralleles/projet/src/Imagens"
         if not os.path.exists(folder):
             os.makedirs(folder)
         plt.savefig(os.path.join(folder, "_rolling_no_first.png"))

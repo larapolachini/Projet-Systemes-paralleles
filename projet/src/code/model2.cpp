@@ -75,20 +75,20 @@ Model::Model( double t_length, unsigned t_discretization, std::array<double,2> t
 // --------------------------------------------------------------------------------------------------------------------
 bool Model::update()
 {
-    // Cria uma cópia do mapa atual de focos de fogo para atualizar durante a iteração
+    // Créer une copie de la carte actuelle des points d'incendie à mettre à jour pendant l'itération
     auto next_front = m_fire_front;
-    // Vetor que armazenará os índices das novas células que serão incendiadas
+    // Vecteur qui stockera les index des nouvelles cellules qui seront incendiées
     std::vector<size_t> fires;
     
-    // Percorre todos os focos de fogo atuais
+    // Parcourt tous les incendies actuels
     for (auto f : m_fire_front)
     {
-        // Recupera a coordenada lexicográfica da célula em fogo
+        // Récupère la coordonnée lexicographique de la cellule en feu
         LexicoIndices coord = get_lexicographic_from_index(f.first);
-        // Calcula a potência do foco (usando a função log_factor)
+        // Calculer la puissance de focalisation (en utilisant la fonction log_factor)
         double power = log_factor(f.second);
         
-        // Testa a célula sul (se houver)
+        // Tester la cellule sud (le cas échéant)
         if (coord.row < m_geometry - 1)
         {
             double tirage      = pseudo_random(f.first + m_time_step, m_time_step);
@@ -100,7 +100,7 @@ bool Model::update()
             }
         }
         
-        // Testa a célula norte (se houver)
+        // Tester la cellule nord (le cas échéant)
         if (coord.row > 0)
         {
             double tirage      = pseudo_random(f.first * 13427 + m_time_step, m_time_step);
@@ -112,7 +112,7 @@ bool Model::update()
             }
         }
         
-        // Testa a célula leste (se houver)
+        // Tester la cellule est (le cas échéant)
         if (coord.column < m_geometry - 1)
         {
             double tirage      = pseudo_random(f.first * 13427 * 13427 + m_time_step, m_time_step);
@@ -124,7 +124,7 @@ bool Model::update()
             }
         }
         
-        // Testa a célula oeste (se houver)
+        // Tester la cellule ouest (le cas échéant)
         if (coord.column > 0)
         {
             double tirage      = pseudo_random(f.first * 13427 * 13427 * 13427 + m_time_step, m_time_step);
@@ -136,7 +136,7 @@ bool Model::update()
             }
         }
         
-        // Se o fogo atingiu sua potência máxima, testa se ele começa a diminuir:
+        // Si le feu a atteint sa puissance maximale, testez s'il commence à diminuer :
         if (f.second == 255)
         {
             double tirage = pseudo_random(f.first * 52513 + m_time_step, m_time_step);
@@ -148,7 +148,7 @@ bool Model::update()
         }
         else
         {
-            // Caso o fogo esteja se extinguindo
+            // Si le feu s'éteint
             m_fire_map[f.first] >>= 1;
             next_front[f.first] >>= 1;
             if (next_front[f.first] == 0)
@@ -158,14 +158,14 @@ bool Model::update()
         }
     }
     
-    // Atualiza os mapas para todas as novas células incendiadas
+    // Mettre à jour les cartes pour toutes les nouvelles cellules brûlées
     for (auto index : fires)
     {
         m_fire_map[index]   = 255.;
         next_front[index]   = 255.;
     }
     
-    // Em cada iteração, a vegetação no local do fogo diminui
+    // À chaque itération, la végétation sur le site de l'incendie diminue
     m_fire_front = next_front;
     for (auto f : m_fire_front)
     {

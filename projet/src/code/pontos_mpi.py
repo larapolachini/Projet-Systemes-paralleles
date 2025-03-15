@@ -32,12 +32,12 @@ def plot_tempo_iteracao(df, titulo):
 
     # Tracé du graphique
     plt.figure(figsize=(8, 6))
-    plt.scatter(iterations, tempos_totais, color='blue', alpha=0.5, label="Dados Reais")
-    plt.plot(x_fit, y_fit, color='red', linestyle='--', label="Ajuste Polinomial (grau 2)")
+    plt.scatter(iterations, tempos_totais, color='blue', alpha=0.5, label="Données réelles")
+    plt.plot(x_fit, y_fit, color='red', linestyle='--', label="Ajustement polynomial (degré 2)")
     
-    plt.title(f"Tempo Total por Iteração - {titulo}")
-    plt.xlabel("Iteração")
-    plt.ylabel("Tempo Total (ms)")
+    plt.title(f"Temps total par itération - {titulo}")
+    plt.xlabel("Itération")
+    plt.ylabel("Temps Total (ms)")
     plt.legend()
     plt.ylim(0,4)
     plt.grid(True)
@@ -54,6 +54,7 @@ for titulo, filepath in files.items():
 
 # Chemin du dossier de fichiers
 base_dir = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau"
+#base_dir = "/home/larapolachini/Projet-Systemes-paralleles/projet/src/Tableau"
 
 # Fichiers avec résultats
 files = {
@@ -96,9 +97,9 @@ for titulo, filepath in files.items():
     plt.plot(x_fit, y_fit, linestyle='--', color=colors[titulo], label=f"{titulo} (ajuste grau 2)")
 
 # Configuration du graphique
-plt.title("Comparação: Tempo Total por Iteração com Ajuste Polinomial")
-plt.xlabel("Iteração")
-plt.ylabel("Tempo Total (ms)")
+plt.title("Comparaison: temps total par itération avec ajustement polynomial")
+plt.xlabel("Itération")
+plt.ylabel("Temps Total (ms)")
 plt.legend()
 plt.ylim(0,4)
 plt.grid(True)

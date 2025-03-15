@@ -5,7 +5,7 @@
 #include <vector>
 #include <cstdint>
 
-// Funções para salvar e comparar mapas
+// Fonctions de sauvegarde et de comparaison de cartes
 void save_map_to_file(const std::string& filename, const std::vector<uint8_t>& map);
 bool compare_map_with_file(const std::string& filename, const std::vector<uint8_t>& map);
 

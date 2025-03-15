@@ -8,7 +8,7 @@
 #include <omp.h>
 #include "model.hpp"
 #include "display.hpp"
-#include <fstream>  // Adiciona a biblioteca para arquivos
+#include <fstream>      // Ajouter la bibliothèque aux fichiers
 #include "map.hpp"
 
 
@@ -225,7 +225,7 @@ int main(int nargs, char* args[])
         //auto start_total = std::chrono::high_resolution_clock::now();
 
         auto start_update = std::chrono::high_resolution_clock::now();
-        bool keep_running = simu.update();  // Só chama uma vez aqui!
+        bool keep_running = simu.update();  // Appelez ici une seule fois !
         auto end_update = std::chrono::high_resolution_clock::now();
 
         std::chrono::duration<double, std::milli> update_time = end_update - start_update;
@@ -269,7 +269,9 @@ int main(int nargs, char* args[])
     }
 
     std::string filename = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps_" 
-    + std::to_string(max_threads) + "_threads.csv";    
+    + std::to_string(max_threads) + "_threads.csv";
+    //std::string filename = "/home/larapolachini/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps_" 
+    // + std::to_string(max_threads) + "_threads.csv";     
     std::ofstream fichier_csv(filename);
 
     if (fichier_csv.is_open())
@@ -311,7 +313,7 @@ int main(int nargs, char* args[])
               << ((temps_total_avancement + temps_total_affichage) / nb_iterations) * 1000.0 
               << " ms" << std::endl;
 
-    // Comparar com arquivos sequenciais
+    // Comparer avec des fichiers séquentiels
     //compare_map_with_file("fire_map_seq.txt", simu.fire_map());
     //compare_map_with_file("vegetation_map_seq.txt", simu.vegetal_map());
     save_map_to_file("fire_map_seq4.txt", simu.fire_map());

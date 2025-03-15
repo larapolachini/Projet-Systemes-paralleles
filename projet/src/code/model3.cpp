@@ -94,7 +94,7 @@ bool Model::update(float * time_update)
             LexicoIndices coord = get_lexicographic_from_index(*it);
             double power = log_factor(m_fire_front[*it]);
 
-            // Verificação dos vizinhos e coleta em local_ignite
+            // Vérifiez les voisins et collectez dans local_ignite
             if (coord.row < m_geometry-1)
             {
                 double tirage      = pseudo_random( *it + m_time_step, m_time_step );
@@ -139,7 +139,7 @@ bool Model::update(float * time_update)
                 }
             }
 
-            // Processamento seguro do estado atual da célula
+            // Traitement sécurisé de l'état actuel de la cellule
             if (m_fire_front[*it] == 255)
             {
                 double tirage = pseudo_random( *it * 52513 + m_time_step, m_time_step );
@@ -167,14 +167,14 @@ bool Model::update(float * time_update)
             }
         }
 
-        // Combinação segura das listas locais
+        // Combinaison sécurisée de listes locales
         #pragma omp critical
         {
             global_ignite.insert(global_ignite.end(), local_ignite.begin(), local_ignite.end());
         }
     }
     *time_update += (omp_get_wtime() - start);
-    // Atualização sequencial das células vizinhas inflamadas
+    // Mise à jour séquentielle des cellules enflammées voisines
     for (auto idx : global_ignite)
     {
         m_fire_map[idx] = 255;

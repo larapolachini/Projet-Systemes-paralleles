@@ -7,7 +7,7 @@
 void save_map_to_file(const std::string& filename, const std::vector<uint8_t>& map) {
     std::ofstream file(filename);
     if (!file.is_open()) {
-        std::cerr << "Erro ao abrir arquivo para salvar: " << filename << std::endl;
+        std::cerr << "Erreur lors de l'ouverture du fichier à enregistrer: " << filename << std::endl;
         return;
     }
 
@@ -17,14 +17,14 @@ void save_map_to_file(const std::string& filename, const std::vector<uint8_t>& m
     file << std::endl;
     file.close();
 
-    std::cout << "Mapa salvo em: " << filename << std::endl;
+    std::cout << "Carte enregistrée dans : " << filename << std::endl;
 }
 
 // Compare une carte actuelle avec celle enregistrée dans le fichier
 bool compare_map_with_file(const std::string& filename, const std::vector<uint8_t>& map) {
     std::ifstream file(filename);
     if (!file.is_open()) {
-        std::cerr << "Erro ao abrir arquivo para comparação: " << filename << std::endl;
+        std::cerr << "Erreur lors de l'ouverture du fichier pour comparaison : " << filename << std::endl;
         return false;
     }
 
@@ -34,29 +34,29 @@ bool compare_map_with_file(const std::string& filename, const std::vector<uint8_
 
     while (file >> val) {
         if (i >= map.size()) {
-            std::cerr << "Arquivo maior que o mapa atual!" << std::endl;
+            std::cerr << "Fichier plus grand que la carte actuelle !" << std::endl;
             identical = false;
             break;
         }
 
         if (map[i] != val) {
-            std::cerr << "Diferença encontrada no índice " << i
-                      << ": paralelo=" << int(map[i])
-                      << " vs sequencial=" << val << std::endl;
+            std::cerr << "Différence trouvée dans l'index " << i
+                      << ": parallèle=" << int(map[i])
+                      << " vs séquentiel=" << val << std::endl;
             identical = false;
         }
         ++i;
     }
 
     if (i < map.size()) {
-        std::cerr << "Arquivo menor que o mapa atual!" << std::endl;
+        std::cerr << "Fichier plus petit que la carte actuelle !" << std::endl;
         identical = false;
     }
 
     if (identical) {
-        std::cout << "[OK] Mapa igual ao arquivo: " << filename << std::endl;
+        std::cout << "[OK] Carte identique au fichier: " << filename << std::endl;
     } else {
-        std::cout << "[ERRO] Mapa DIFERENTE de: " << filename << std::endl;
+        std::cout << "[ERRO] DIFFÉRENTE carte de: " << filename << std::endl;
     }
 
     return identical;

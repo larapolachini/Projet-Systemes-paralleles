@@ -6,6 +6,7 @@ import numpy as np
 from scipy.signal import savgol_filter
 
 csv_files = glob.glob("/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps*.csv")
+#csv_files = glob.glob("/home/larapolachini/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps*.csv")
 if not csv_files:
     print("Aucun fichier CSV trouvé.")
     exit()
@@ -37,15 +38,15 @@ for threads, df in sorted(dataframes.items()):
     axs[1].plot(x, avancement_smoothed, label=f'{threads} thread(s)')
 
 axs[0].set_xlabel(x_column)
-axs[0].set_ylabel("Tempo Total (ms)")
-axs[0].set_title("Tempo Total (ms) vs " + x_column + " (suavizado com Savitzky–Golay)")
+axs[0].set_ylabel("Temps Total (ms)")
+axs[0].set_title("Temps Total (ms) vs " + x_column + " (softned with Savitzky-Golay)")
 axs[0].legend()
 axs[0].set_ylim(0, 10)
 axs[0].grid(True)
 
 axs[1].set_xlabel(x_column)
-axs[1].set_ylabel("Tempo de Avancement (ms)")
-axs[1].set_title("Tempo de Avancement (ms) vs " + x_column + " (suavizado com Savitzky–Golay)")
+axs[1].set_ylabel("Temps de Avancement (ms)")
+axs[1].set_title("Temps de Avancement (ms) vs " + x_column + " (softned with Savitzky-Golay)")
 axs[1].legend()
 axs[1].grid(True)
 
@@ -53,6 +54,8 @@ plt.tight_layout()
 
 import os
 folder = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Imagens"
+folder = "/home/larapolachini/Projet-Systemes-paralleles/projet/src/Imagens"
+
 if not os.path.exists(folder):
     os.makedirs(folder)
 plt.savefig(os.path.join(folder, "comparison_total_avancement_savgol.png"))

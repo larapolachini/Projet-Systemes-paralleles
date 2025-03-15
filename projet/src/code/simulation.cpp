@@ -225,7 +225,7 @@ int main(int nargs, char* args[])
         //auto start_total = std::chrono::high_resolution_clock::now();
 
         auto start_update = std::chrono::high_resolution_clock::now();
-        bool keep_running = simu.update();  // Só chama uma vez aqui!
+        bool keep_running = simu.update();      // Appelez ici une seule fois !
         auto end_update = std::chrono::high_resolution_clock::now();
 
         std::chrono::duration<double, std::milli> update_time = end_update - start_update;
@@ -272,7 +272,9 @@ int main(int nargs, char* args[])
     }
 
 
-    std::ofstream fichier_csv("/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps.csv");
+    //std::ofstream fichier_csv("/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps.csv");
+    std::ofstream fichier_csv("/home/larapolachini/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps.csv");
+
 
     if (fichier_csv.is_open())
     {

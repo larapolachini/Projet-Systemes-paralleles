@@ -12,7 +12,7 @@ all: $(TARGET)
 $(TARGET): $(SOURCES)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SOURCES) $(LDFLAGS)
 
-# Regra para executar todas as combinações
+# Règle pour exécuter toutes les combinaisons
 run_all:
 	@for mpi in 1 2 4; do \
 		for t in 1 2 4 8 ; do \

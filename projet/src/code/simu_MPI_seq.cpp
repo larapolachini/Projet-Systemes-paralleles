@@ -9,7 +9,7 @@
 
 #include "model.hpp"
 #include "display.hpp"
-#include <fstream>  // Adiciona a biblioteca para arquivos
+#include <fstream>  // Ajouter la bibliothèque aux fichiers
 
 
 
@@ -219,7 +219,7 @@ int main(int nargs, char* args[])
 
         if (!check_params(params))
         {
-            std::cerr << "Parâmetros inválidos. Abortando MPI.\n";
+            std::cerr << "Paramètres non valides. Abandon du MPI.\n";
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
     }
@@ -230,15 +230,16 @@ int main(int nargs, char* args[])
     Model simu(params.length, params.discretization, params.wind, params.start);
 
 
-    std::string output_filename = "/home/davy/.../results_mpi_" + std::to_string(size) + ".txt";
+   std::string output_filename = "results_mpi_" + std::to_string(size) + ".csv";
+
     std::ofstream output_file;
     if (rank == 0)
     {
         output_file.open(output_filename);
         if (!output_file.is_open())
         {
-            std::cerr << "Erro ao abrir arquivo " << output_filename << std::endl;
-            perror("Motivo do sistema");
+            std::cerr << "Erreur lors de l'ouverture du fichier" << output_filename << std::endl;
+            perror("Raison du système");
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
 
@@ -332,7 +333,7 @@ int main(int nargs, char* args[])
 
     if (rank == 0)
     {
-        output_file << "\nSimulação encerrada.\n";
+        output_file << "\nSimulation fermée.\n";
         output_file.close();
     }
 

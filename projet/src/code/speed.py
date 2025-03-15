@@ -6,15 +6,19 @@ import numpy as np
 
 # Rechercher tous les fichiers CSV commençant par « resultats_temps »
 csv_files = glob.glob("/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps*.csv")
+#csv_files = glob.glob("/home/larapolachini/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps*.csv")
+
 
 if not csv_files:
-    print("Nenhum arquivo CSV encontrado.")
+    print("Aucun fichier CSV trouvé.")
     exit()
 
 # Identifiez le fichier de référence (nous supposons qu'il s'agit de "resultats_temps.csv")
 baseline_filename = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps.csv"
+#baseline_filename = "/home/larapolachini/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps.csv"
+
 if baseline_filename not in csv_files:
-    print("Arquivo baseline não encontrado (resultats_temps.csv)")
+    print("Fichier de référence introuvable (resultats_temps.csv)")
     exit()
 
 # Charger la ligne de base (1 thread)
@@ -68,15 +72,17 @@ for threads, s in sorted(speedups.items()):
     # Générer des points pour tracer la courbe polynomiale lisse
     x_fit = np.linspace(x.min(), x.max(), 500)
     y_fit = poly_fn(x_fit)
-    plt.plot(x_fit, y_fit, linewidth=2, label=f'{threads} thread(s) (ajuste polinomial)')
+    plt.plot(x_fit, y_fit, linewidth=2, label=f'{threads} thread(s) (ajustement polynomial)')
 
 plt.xlabel(x_column)
-plt.ylabel("Speedup (baseline / tempo)")
-plt.title("Speedup por Iteração/Timestep (Ajuste Polinomial) para cada Quantidade de Threads")
+plt.ylabel("Speedup (baseline / temps)")
+plt.title("Speedup par Itération/Timestep (Ajustement Polynomial) pour chaque nombre de Threads")
 plt.legend()
 plt.grid(True)
 import os
 folder = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Imagens"
+#folder = "/home/larapolachini/Projet-Systemes-paralleles/projet/src/Imagens"
+
 if not os.path.exists(folder):
     os.makedirs(folder)
 plt.savefig(os.path.join(folder, "SpeedupxTimeStep"))
@@ -88,15 +94,16 @@ threads_list = sorted(avg_speedups.keys())
 avg_values = [avg_speedups[t] for t in threads_list]
 
 plt.figure(figsize=(10, 6), dpi=150)
-plt.plot(threads_list, avg_values, marker='o', linestyle='-', label='Speedup Médio')
-plt.xlabel("Número de Threads")
-plt.ylabel("Speedup Médio")
-plt.title("Speedup Médio versus Número de Threads")
+plt.plot(threads_list, avg_values, marker='o', linestyle='-', label='Speedup Moyen')
+plt.xlabel("Nombre de Threads")
+plt.ylabel("Speedup Moyen")
+plt.title("Speedup Moyen versus Nombre de Threads")
 plt.xticks(threads_list)
 plt.legend()
 plt.grid(True)
 import os
 folder = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Imagens"
+#folder = "/home/larapolachini/Projet-Systemes-paralleles/projet/src/Imagens"
 if not os.path.exists(folder):
     os.makedirs(folder)
 plt.savefig(os.path.join(folder, "_rolling_no_first.png"))

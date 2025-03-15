@@ -12,7 +12,7 @@ void save_map(const std::string &filename, const std::vector<uint8_t> &map, unsi
     std::ofstream out(filename);
     if (!out.is_open())
     {
-        std::cerr << "[ERRO] Não foi possível abrir o arquivo " << filename << std::endl;
+        std::cerr << "[ERREUR] Impossible d'ouvrir le fichier " << filename << std::endl;
         return;
     }
 
@@ -29,7 +29,7 @@ void save_map(const std::string &filename, const std::vector<uint8_t> &map, unsi
     }
 
     out.close();
-    std::cout << "[INFO] Mapa salvo em: " << filename << std::endl;
+    std::cout << "[INFO] Carte enregistrée dans : " << filename << std::endl;
 }
 
 int main()
@@ -49,10 +49,10 @@ int main()
     {
         ++steps;
         if (steps % 50 == 0)
-            std::cout << "Passo " << steps << " concluído." << std::endl;
+            std::cout << "Étape " << steps << " terminée." << std::endl;
     }
 
-    std::cout << "Simulação concluída em " << steps << " passos." << std::endl;
+    std::cout << "Simulation terminée le " << steps << " étape." << std::endl;
 
     save_map("fire_map_seq2.txt", simulation.fire_map(), simulation.geometry());
     save_map("vegetation_map_seq2.txt", simulation.vegetation_map(), simulation.geometry());
