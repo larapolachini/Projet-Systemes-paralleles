@@ -54,7 +54,7 @@ plt.tight_layout()
 
 import os
 folder = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Imagens"
-folder = "/home/larapolachini/Projet-Systemes-paralleles/projet/src/Imagens"
+#folder = "/home/larapolachini/Projet-Systemes-paralleles/projet/src/Imagens"
 
 if not os.path.exists(folder):
     os.makedirs(folder)

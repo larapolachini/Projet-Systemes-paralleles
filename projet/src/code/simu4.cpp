@@ -4,26 +4,27 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <vector>
 #include <SDL2/SDL.h>
-
+#include <mpi.h>
+#include <fstream>
 #include "model.hpp"
 #include "display.hpp"
-#include <fstream> 
-#include <vector>
 #include "map.hpp"
-
-
 
 using namespace std::string_literals;
 using namespace std::chrono_literals;
 
 struct ParamsType
 {
-    double length{1.};
+    double length{1.0};
     unsigned discretization{20u};
-    std::array<double,2> wind{0.,0.};
-    Model::LexicoIndices start{10u,10u};
+    std::array<double, 2> wind{0.0, 0.0};
+    Model::LexicoIndices start{10u, 10u};
 };
+
+
+
 
 void analyze_arg( int nargs, char* args[], ParamsType& params )
 {
@@ -198,135 +199,77 @@ void display_params(ParamsType const& params)
               << "\tPosition initiale du foyer (col, ligne) : " << params.start.column << ", " << params.start.row << std::endl;
 }
 
-int main(int nargs, char* args[])
+int main(int argc, char *argv[])
 {
-    auto params = parse_arguments(nargs - 1, &args[1]);
-    display_params(params);
-    if (!check_params(params)) return EXIT_FAILURE;
+    MPI_Init(&argc, &argv);
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    auto displayer = Displayer::init_instance(params.discretization, params.discretization);
-
-    auto simu = Model(params.length, params.discretization, params.wind, params.start);
-    SDL_Event event;
-
-    auto start_total = std::chrono::high_resolution_clock::now();
-
-    bool keep_running = true;
-    int step_count = 0;
-    int max_steps = 100;
-
-    double temps_total_avancement = 0.0;
-    double temps_total_affichage = 0.0;
-    unsigned long nb_iterations = 0;
-    std::vector<double> temps_avancement_par_iteration;
-    std::vector<double> temps_affichage_par_iteration;
-    std::vector<int> time_steps;
-
-    
-    while (simu.update() && nb_iterations < 1001)
+    ParamsType params;
+    if (rank == 0)
     {
-        //auto start_total = std::chrono::high_resolution_clock::now();
+        params.length = 1.0;
+        params.discretization = 20;
+        params.wind = {0, 0};
+        params.start = {10, 10};
+    }
 
+    MPI_Bcast(&params, sizeof(ParamsType), MPI_BYTE, 0, MPI_COMM_WORLD);
+
+    int rows_per_proc = params.discretization / size;
+    int start_row = rank * rows_per_proc;
+    int end_row = (rank == size - 1) ? params.discretization - 1 : (start_row + rows_per_proc - 1);
+
+    Model simu(params.length, params.discretization, params.wind, params.start);
+    
+    double start_time = MPI_Wtime();
+    bool keep_running = true;
+
+    while (keep_running)
+    {
+        double update_time_milli = 0.0;
         auto start_update = std::chrono::high_resolution_clock::now();
-        bool keep_running = simu.update();      // Appelez ici une seule fois !
+        bool local_continue = simu.update();
         auto end_update = std::chrono::high_resolution_clock::now();
-
         std::chrono::duration<double, std::milli> update_time = end_update - start_update;
-        temps_total_avancement += update_time.count();
+        update_time_milli = update_time.count();
 
-        auto start_displayer = std::chrono::high_resolution_clock::now();
-        displayer->update(simu.vegetal_map(), simu.fire_map());
-        auto end_displayer = std::chrono::high_resolution_clock::now();
+        int local_keep_running = local_continue ? 1 : 0;
+        int global_keep_running = 0;
+        MPI_Allreduce(&local_keep_running, &global_keep_running, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        keep_running = (global_keep_running == 1);
 
-        std::chrono::duration<double, std::milli> display_time = end_displayer - start_displayer;
-        temps_total_affichage += display_time.count();
-
-        int current_timestep = simu.time_step();
-        time_steps.push_back(current_timestep);
-
-        nb_iterations++;
-
-
-        temps_avancement_par_iteration.push_back(update_time.count());
-        temps_affichage_par_iteration.push_back(display_time.count());
-        std::vector<int> time_steps;
-
-
-
-
-
-        if ((simu.time_step() & 31) == 0)
-        {
-            std::cout << "Time step " << simu.time_step() << "\n===============" << std::endl;
-             // Affichage des moyennes à l'instant T
-            std::cout << "Moyenne avancement : " 
-                << (temps_total_avancement / nb_iterations) * 1000.0 
-                << " ms" << std::endl;
-            std::cout << "Moyenne affichage : " 
-                << (temps_total_affichage / nb_iterations) * 1000.0 
-                << " ms" << std::endl;
-        }
-
-        if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
+        if (!keep_running)
             break;
 
-        std::this_thread::sleep_for(0.1s);
-
-    }
-
-
-    //std::ofstream fichier_csv("/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps.csv");
-    std::ofstream fichier_csv("/home/larapolachini/Projet-Systemes-paralleles/projet/src/Tableau/resultats_temps.csv");
-
-
-    if (fichier_csv.is_open())
-    {
-        // En-têtes
-        fichier_csv << "Iteration;TimeStep;Temps_avancement(ms);Temps_affichage(ms);Temps_total(ms)\n";
-    
-        for (size_t i = 0; i < temps_avancement_par_iteration.size(); ++i)
+        if (rank > 0)
         {
-            double total = temps_avancement_par_iteration[i] + temps_affichage_par_iteration[i];
-            fichier_csv << i << "; "
-                        << time_steps[i] << "; "
-                        << temps_avancement_par_iteration[i] << "; "
-                        << temps_affichage_par_iteration[i] << "; "
-                        << total << "\n";
+            MPI_Send(simu.fire_map[1].data(), params.discretization, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD);
+            MPI_Recv(simu.fire_map()[start_row - 1].data(), params.discretization, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
-    
-        fichier_csv.close();
-        std::cout << "Fichier CSV 'resultats_temps.csv' généré avec succès !\n";
+        if (rank < size - 1)
+        {
+            MPI_Send(simu.fire_map()[end_row].data(), params.discretization, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD);
+            MPI_Recv(simu.fire_map()[end_row + 1].data(), params.discretization, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        }
+
+        MPI_Barrier(MPI_COMM_WORLD);
     }
-    else
+
+    double end_time = MPI_Wtime();
+    double elapsed_time = end_time - start_time;
+    double max_time;
+
+    MPI_Reduce(&elapsed_time, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    if (rank == 0)
     {
-        std::cerr << "Erreur à l'ouverture du fichier CSV !" << std::endl;
+        double sequential_time = 4.19;  // Tempo obtido para execução sequencial
+        double speedup = sequential_time / max_time;
+        std::cout << "Speedup: " << speedup << std::endl;
     }
 
-
-    auto end_total = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> total_time = end_total - start_total;
-    std::cout << "Tempo total da execução sequencial: " << total_time.count() << " ms" << std::endl;
-
-    std::cout << "Simulation terminée !" << std::endl;
-    std::cout << "Nombre d'iterations : " << nb_iterations << std::endl;
-
-    std::cout << "Temps moyen d'avancement : " 
-              << (temps_total_avancement / nb_iterations) * 1000.0 
-              << " ms" << std::endl;
-
-    std::cout << "Temps moyen d'affichage : " 
-              << (temps_total_affichage / nb_iterations) * 1000.0 
-              << " ms" << std::endl;
-
-    std::cout << "Temps moyen total par pas de temps : " 
-              << ((temps_total_avancement + temps_total_affichage) / nb_iterations) * 1000.0 
-              << " ms" << std::endl;
-
-    
-
-
-
-    SDL_Quit();
+    MPI_Finalize();
     return EXIT_SUCCESS;
 }
-
