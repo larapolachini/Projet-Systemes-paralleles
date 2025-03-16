@@ -6,7 +6,6 @@
 #include <chrono>
 #include <SDL2/SDL.h>
 #include <mpi.h>
-
 #include "model.hpp"
 #include "display.hpp"
 #include <fstream>  // Ajouter la bibliothèque aux fichiers

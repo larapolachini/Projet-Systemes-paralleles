@@ -6,12 +6,10 @@
 #include <chrono>
 #include <SDL2/SDL.h>
 #include <mpi.h>
-#include <omp.h>
 #include "model.hpp"
 #include "display.hpp"
-#include <fstream>   // Ajouter la bibliothèque aux fichiers
-
-
+#include <fstream> 
+#include <omp.h> 
 
 using namespace std::string_literals;
 using namespace std::chrono_literals;
@@ -203,98 +201,142 @@ int main(int nargs, char* args[])
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    int max_threads = omp_get_max_threads();
 
-    std::shared_ptr<Displayer> displayer;  // Déclarer le pointeur globalement
-    auto params = parse_arguments(nargs - 1, &args[1]);
+    // Adicionado: pegar o número de threads do OpenMP
+    int num_threads = omp_get_max_threads();
+
+    std::shared_ptr<Displayer> displayer;
+
+    ParamsType params;
     if (rank == 0)
     {
+        params = parse_arguments(nargs - 1, &args[1]);
+
         displayer = Displayer::init_instance(params.discretization, params.discretization);
+
         display_params(params);
+
         if (!check_params(params))
         {
+            std::cerr << "Paramètres non valides. Abandon du MPI.\n";
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
     }
 
     MPI_Bcast(&params, sizeof(ParamsType), MPI_BYTE, 0, MPI_COMM_WORLD);
 
-    auto simu = Model(params.length, params.discretization, params.wind, params.start);
+    Model simu(params.length, params.discretization, params.wind, params.start);
 
-    //std::string output_file = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/Tableau_Part2/results_mpi" 
-    //+ std::to_string(max_threads) + "_threads.txt";    
-    std::string output_file = "/home/larapolachini/Projet-Systemes-paralleles/projet/src/Tableau/Tableau_Part2/results_mpi" 
-    + std::to_string(max_threads) + "_threads.txt";
+    // Nome do arquivo agora inclui "size" (MPI) e "num_threads" (OpenMP)
+    std::string output_filename = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/Tableau_Part3/results_mpi_" + std::to_string(size) +
+                                  "_omp_" + std::to_string(num_threads) + ".csv";
 
-    std::ofstream fichier_txt(output_file);  
-    
+    std::ofstream output_file;
     if (rank == 0)
     {
-
-        if (!fichier_txt.is_open())
+        output_file.open(output_filename);
+        if (!output_file.is_open())
         {
-            std::cerr << "Erreur lors de l'ouverture du fichier pour l'écriture!" << std::endl;
+            std::cerr << "Erreur lors de l'ouverture du fichier " << output_filename << std::endl;
+            perror("Raison du système");
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
 
-        fichier_txt << "Simulation Parameters:\n";
-        fichier_txt << "Length: " << params.length << "\n";
-        fichier_txt << "Discretization: " << params.discretization << "\n";
-        fichier_txt << "Wind: (" << params.wind[0] << ", " << params.wind[1] << ")\n";
-        fichier_txt << "Start Fire Position: (" << params.start.row << ", " << params.start.column << ")\n";
-        fichier_txt << "-------------------------------------------\n";
-        fichier_txt << "TimeStep;Temps_avancement(ms);Temps_affichage(ms);Temps_total(ms)\n";
-
+        output_file << "Simulation Parameters:\n";
+        output_file << "Length: " << params.length << "\n";
+        output_file << "Discretization: " << params.discretization << "\n";
+        output_file << "Wind: (" << params.wind[0] << ", " << params.wind[1] << ")\n";
+        output_file << "Start Fire Position: (" 
+                    << params.start.row << ", " << params.start.column << ")\n";
+        output_file << "MPI Processes: " << size << "\n";
+        output_file << "OpenMP Threads: " << num_threads << "\n";
+        output_file << "-------------------------------------------\n";
+        output_file << "TimeStep;Temps_avancement(ms);Temps_affichage(ms);Temps_total(ms)\n";
     }
+
+    // ... o resto do seu código segue sem alteração ...
 
     bool keep_running = true;
 
-    while (keep_running)
+    while (true)
     {
-        auto start_total = std::chrono::high_resolution_clock::now();
+        double update_time_milli = 0.0;
+        {
+            auto start_update = std::chrono::high_resolution_clock::now();
+            
+            bool local_continue = simu.update(); 
 
-        auto start_update = std::chrono::high_resolution_clock::now();
-        keep_running = simu.update();  // Appelez ici une seule fois !
-        auto end_update = std::chrono::high_resolution_clock::now();
+            auto end_update = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double, std::milli> update_time = end_update - start_update;
+            update_time_milli = update_time.count();
 
-        std::chrono::duration<double, std::milli> update_time = end_update - start_update;
+            int local_keep_running = local_continue ? 1 : 0;
+            int global_keep_running = 0;
 
+            MPI_Allreduce(&local_keep_running,
+                          &global_keep_running,
+                          1,
+                          MPI_INT,
+                          MPI_MIN,
+                          MPI_COMM_WORLD);
+
+            keep_running = (global_keep_running == 1);
+        }
+
+        if (!keep_running) 
+            break;
+
+        double display_time_milli = 0.0;
         if (rank == 0)
         {
-            SDL_Event event;
-
             auto start_displayer = std::chrono::high_resolution_clock::now();
-            if(displayer)
+
+            if (displayer)
             {
                 displayer->update(simu.vegetal_map(), simu.fire_map());
             }
-            auto end_displayer = std::chrono::high_resolution_clock::now();
 
+            auto end_displayer = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double, std::milli> display_time = end_displayer - start_displayer;
-            double total_time = update_time.count() + display_time.count();
+            display_time_milli = display_time.count();
+
+            double total_time = update_time_milli + display_time_milli;
 
             if(simu.time_step() % 31 == 0)
             {
-                fichier_txt << "\nTime step " << simu.time_step() << "\n";
-                fichier_txt << "===============\n";
+                output_file << "\nTime step " << simu.time_step() << "\n";
+                output_file << "===============\n";
             }
 
-            fichier_txt << simu.time_step() << "\t" << update_time.count() << "\t" << display_time.count() << "\t" << total_time << "\n";
+            output_file << simu.time_step() << ";"
+                        << update_time_milli << ";"
+                        << display_time_milli << ";"
+                        << total_time << "\n";
 
+            SDL_Event event;
             if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
-                keep_running = false;
+            {
+                keep_running = false; 
+            }
         }
+        int keep = keep_running ? 1 : 0;
+        MPI_Bcast(&keep, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        keep_running = (keep == 1);
+
+        if (!keep_running) 
+            break;
 
         MPI_Barrier(MPI_COMM_WORLD);
-
     }
 
     if (rank == 0)
     {
-        fichier_txt << "\nSimulation ended. \n ";
-        fichier_txt.close();
+        output_file << "\nSimulation fermée.\n";
+        output_file.close();
     }
 
     MPI_Finalize();
+    SDL_Quit();
+
     return EXIT_SUCCESS;
 }
