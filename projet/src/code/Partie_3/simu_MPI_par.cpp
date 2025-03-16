@@ -202,7 +202,7 @@ int main(int nargs, char* args[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    // Adicionado: pegar o número de threads do OpenMP
+   
     int num_threads = omp_get_max_threads();
 
     std::shared_ptr<Displayer> displayer;
@@ -227,9 +227,11 @@ int main(int nargs, char* args[])
 
     Model simu(params.length, params.discretization, params.wind, params.start);
 
-    // Nome do arquivo agora inclui "size" (MPI) e "num_threads" (OpenMP)
-    std::string output_filename = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/Tableau_Part3/results_mpi_" + std::to_string(size) +
-                                  "_omp_" + std::to_string(num_threads) + ".csv";
+   
+    //std::string output_filename = "/home/davy/Ensta/ProjetParallel/Projet-Systemes-paralleles/projet/src/Tableau/Tableau_Part3/results_mpi_" + std::to_string(size) +
+      //                            "_omp_" + std::to_string(num_threads) + ".csv";
+    std::string output_filename = "/home/larapolachini/Projet-Systemes-paralleles/projet/src/Tableau/Tableau_Part3/results_mpi_" + std::to_string(size) +
+     "_omp_" + std::to_string(num_threads) + ".csv";
 
     std::ofstream output_file;
     if (rank == 0)
@@ -254,7 +256,7 @@ int main(int nargs, char* args[])
         output_file << "TimeStep;Temps_avancement(ms);Temps_affichage(ms);Temps_total(ms)\n";
     }
 
-    // ... o resto do seu código segue sem alteração ...
+ 
 
     bool keep_running = true;
 
